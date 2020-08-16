@@ -1,0 +1,8 @@
+Flask==1.1.2
+gunicorn==20.0.4
+mlflow==1.10.0
+psycopg2==2.8.4
+SQLAlchemy==1.3.13
+redis==3.5.3
+
+

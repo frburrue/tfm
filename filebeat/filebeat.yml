@@ -1,0 +1,25 @@
+filebeat.config:
+  modules:
+    path: ${path.config}/modules.d/*.yml
+    reload.enabled: false
+
+filebeat.inputs:
+- type: log
+  enabled: true
+  paths:
+    - /mnt/log/*.log
+  scan_frequency: 1s
+  json.keys_under_root: true
+  json.add_error_key: true
+
+processors:
+  - decode_json_fields:
+      fields: ['log_trace']
+      max_depth: 10
+      process_array: true
+
+output.elasticsearch:
+  hosts: 'http://elasticsearch:9200'
+
+setup.kibana:
+  host: 'http://kibana:5601'

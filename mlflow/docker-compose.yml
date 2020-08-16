@@ -1,0 +1,64 @@
+version: '3.7'
+
+services:
+
+  postgres:
+    image: postgres:12
+    hostname: postgres
+    container_name: postgres
+    ports:
+      - '0.0.0.0:5432:5432'
+    networks: ['docker-network']
+    volumes: 
+      - 'postgres:/var/lib/postgresql/data'
+      - './postgres/docker-entrypoint-initdb.d:/docker-entrypoint-initdb.d'
+    environment:
+      POSTGRES_DB: default
+      POSTGRES_USER: accenture
+      POSTGRES_PASSWORD: accenture
+    restart: always
+
+  mlflow-environment:
+    build: ./mlflow-environment
+    hostname: mflow-environment
+    container_name: mflow-environment
+    ports:
+      - '0.0.0.0:8990:8990'
+      - '0.0.0.0:8991:8991'
+    networks: ['docker-network']
+    environment:
+      MLFLOW_TRACKING_URI: postgresql://accenture:accenture@postgres:5432/mlflow
+    depends_on:
+      - postgres
+    restart: always
+
+  backend:
+    build: ./backend
+    container_name: backend
+    hostname: backend
+    ports:
+      - "8992:8992"
+    networks: ['docker-network']
+    environment:
+      POSTGRES_HOSTNAME: postgres
+      REDIS_HOSTNAME: redis
+      ARTIFACTS_PATH: /home/francisco/Documentos/mlflowshowcase/docker/artifacts_retina-net
+    volumes:
+      - './artifacts_retina-net:/app/artifacts_retina-net'
+    depends_on:
+      - postgres
+  redis:
+    image: redis:5-alpine
+    hostname: redis
+    container_name: redis
+    ports:
+      - '0.0.0.0:6379:6379'
+    networks: ['docker-network']
+    restart: always
+
+volumes:
+  postgres:
+    driver: local
+
+networks:
+  docker-network:

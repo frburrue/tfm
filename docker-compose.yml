@@ -1,0 +1,234 @@
+version: '3.7'
+
+x-common-variables:
+  - &common_environment_variables
+    POSTGRES: ${POSTGRES_HOST}:5432
+    MYSQL: ${MYSQL_HOST}:3306
+    MONGO: ${MONGO_HOST}:27017
+    REDIS: ${REDIS_HOST}:6379
+    RABBITMQ: ${RABBITMQ_HOST}:5672
+    BACKEND: ${BACKEND_HOST}:${BACKEND_PORT}
+    WORKER: ${WORKER_HOST}:${WORKER_PORT}
+    NODERED: ${NODE_RED_HOST}:1880
+    ELASTICSEARCH: ${ELASTICSEARCH_HOST}:9200
+    KIBANA: ${KIBANA_HOST}:5601
+    FILEBEAT: ${FILEBEAT_HOST}:80
+    GRAFANA: ${GRAFANA_HOST}:3000
+    MQTT_BROKER_MQTT: ${MQTT_BROKER_HOST}:1883
+    MQTT_BROKER_WS: ${MQTT_BROKER_HOST}:9001
+    HTTP_TO_MQTT: ${HTTP_TO_MQTT_HOST}:${HTTP_TO_MQTT_PORT}
+    HTTP_TO_LAMBDA: ${HTTP_TO_LAMBDA_HOST}:${HTTP_TO_LAMBDA_PORT}
+  - &credentials
+    RABBITMQ_USERNAME: francisco
+    RABBITMQ_PASSWORD: francisco
+
+services:
+
+  backend:
+    hostname: ${BACKEND_HOST}
+    container_name: ${BACKEND_HOST}
+    build: ./${BACKEND_HOST}
+    ports:
+      - '0.0.0.0:${BACKEND_PORT}:${BACKEND_PORT}'
+    networks: ['${NETWORK}']
+    volumes:
+      - ${LOG_VOLUME}:${LOG_MOUNTPOINT}
+    environment:
+      BACKEND_PORT: ${BACKEND_PORT}
+      BACKEND_NUM_WORKERS: ${BACKEND_NUM_WORKERS}
+      <<: *common_environment_variables
+      <<: *credentials
+    depends_on:
+      - rabbitmq
+    restart: always
+
+  worker:
+    hostname: ${WORKER_HOST}
+    container_name: ${WORKER_HOST}
+    build: ./${WORKER_HOST}
+    ports:
+      - '0.0.0.0:${WORKER_PORT}:${WORKER_PORT}'
+    networks: ['${NETWORK}']
+    environment:
+      WORKER_PORT: ${WORKER_PORT}
+      WORKER_NUM_WORKERS: ${WORKER_NUM_WORKERS}
+      MLFLOW_TRACKING_URI: 'postgresql://francisco:francisco@postgres:5432/mlflow'
+      <<: *common_environment_variables
+      <<: *credentials
+    depends_on:
+      - backend
+    restart: always
+
+  postgres:
+    image: postgres:12
+    hostname: ${POSTGRES_HOST}
+    container_name: ${POSTGRES_HOST}
+    ports:
+      - '0.0.0.0:${POSTGRES_PORT}:5432'
+    networks: ['${NETWORK}']
+    volumes: 
+      - '${POSTGRES_RESOURCES_PATH}:/var/lib/postgresql/data'
+    environment:
+      POSTGRES_DB: default
+      POSTGRES_USER: francisco
+      POSTGRES_PASSWORD: francisco
+    restart: always
+
+  pgadmin:
+    image: dpage/pgadmin4:4.24
+    hostname: ${PGADMIN_HOST}
+    container_name: ${PGADMIN_HOST}
+    ports:
+      - "0.0.0.0:${PGADMIN_PORT}:80"
+    networks: ['${NETWORK}']
+    volumes: ['${PGADMIN_RESOURCES_PATH}:/var/lib/pgadmin']
+    environment:
+      PGADMIN_DEFAULT_EMAIL: "franciscoburruezo@live.com"
+      PGADMIN_DEFAULT_PASSWORD: "francisco"
+    depends_on:
+      - postgres
+    restart: always
+
+  mysql:
+    image: mysql:8
+    hostname: ${MYSQL_HOST}
+    container_name: ${MYSQL_HOST}
+    ports:
+      - '0.0.0.0:${MYSQL_PORT}:3306'
+    networks: ['${NETWORK}']
+    volumes: ['${MYSQL_RESOURCES_PATH}:/var/lib/mysql']
+    environment:
+      MYSQL_DATABASE: default
+      MYSQL_USER: francisco
+      MYSQL_PASSWORD: francisco
+      MYSQL_ALLOW_EMPTY_PASSWORD: 1
+    restart: always
+
+  mongo:
+    image: mongo:4-bionic
+    hostname: ${MONGO_HOST}
+    container_name: ${MONGO_HOST}
+    ports:
+      - '0.0.0.0:${MONGO_PORT}:27017'
+    networks: ['${NETWORK}']
+    volumes: ['${MONGO_RESOURCES_PATH}:/data/db']
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: francisco
+      MONGO_INITDB_ROOT_PASSWORD: francisco
+    restart: always
+
+  redis:
+    image: redis:5-alpine
+    hostname: ${REDIS_HOST}
+    container_name: ${REDIS_HOST}
+    ports:
+      - '0.0.0.0:${REDIS_PORT}:6379'
+    networks: ['${NETWORK}']
+    restart: always
+
+  rabbitmq:
+    image: rabbitmq:3
+    hostname: ${RABBITMQ_HOST}
+    container_name: ${RABBITMQ_HOST}
+    ports:
+      - '0.0.0.0:${RABBITMQ_PORT}:5672'
+    networks: ['${NETWORK}']
+    environment:
+      RABBITMQ_DEFAULT_USER: francisco
+      RABBITMQ_DEFAULT_PASS: francisco
+    restart: always
+
+  mqtt-broker:
+    image: eclipse-mosquitto:1.6.9
+    hostname: ${MQTT_BROKER_HOST}
+    container_name: ${MQTT_BROKER_HOST}
+    ports:
+      - '0.0.0.0:${MQTT_BROKER_PORT_1}:1883'
+      - '0.0.0.0:${MQTT_BROKER_PORT_2}:9001'
+    volumes:
+      - ./${MQTT_BROKER_HOST}/mosquitto.conf:/mosquitto/config/mosquitto.conf
+    networks: ['${NETWORK}']
+    restart: always
+
+  node-red:
+    hostname: ${NODE_RED_HOST}
+    container_name: ${NODE_RED_HOST}
+    build: ./${NODE_RED_HOST}/${ARCH}
+    ports:
+      - '0.0.0.0:${NODE_RED_PORT}:1880'
+    networks: ['${NETWORK}']
+    volumes:
+      - ${NODE_RED_RESOURCES_PATH}:/data
+    environment:
+      <<: *common_environment_variables
+    restart: always
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:7.6.2
+    hostname: ${ELASTICSEARCH_HOST}
+    container_name: ${ELASTICSEARCH_HOST}
+    ports:
+      - '0.0.0.0:${ELASTICSEARCH_PORT}:9200'
+    networks: ['${NETWORK}']
+    volumes:
+      - ${ELASTICSEARCH_VOLUME}:/usr/share/elasticsearch/data
+    environment:
+      cluster.name: ${ELASTICSEARCH_HOST}
+      node.name: ${ELASTICSEARCH_HOST}
+      discovery.type: single-node
+      bootstrap.memory_lock: 'true'
+      ES_JAVA_OPTS: "-Xms512m -Xmx512m"
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    restart: always
+
+  kibana:
+    image: docker.elastic.co/kibana/kibana-oss:7.6.2
+    hostname: ${KIBANA_HOST}
+    container_name: ${KIBANA_HOST}
+    ports:
+      - '0.0.0.0:${KIBANA_PORT}:5601'
+    networks: ['${NETWORK}']
+    depends_on: 
+      - elasticsearch
+    environment:
+      SERVER_NAME: ${KIBANA_HOST}
+      ELASTICSEARCH_HOSTS: http://${ELASTICSEARCH_HOST}:9200
+    restart: always
+
+  filebeat:
+    hostname: ${FILEBEAT_HOST}
+    container_name: ${FILEBEAT_HOST}
+    build: ./${FILEBEAT_HOST}
+    ports:
+      - '0.0.0.0:${FILEBEAT_PORT}:80'
+    networks: ['${NETWORK}']
+    volumes:
+      - ${LOG_VOLUME}:${LOG_MOUNTPOINT}
+    restart: always
+
+  mlflow-environment:
+    build: ./${MLFLOW_HOST}/mlflow-environment
+    hostname: mflow-environment
+    container_name: mflow-environment
+    ports:
+      - '0.0.0.0:${MLFLOW_PORT_UI}:8990'
+      - '0.0.0.0:${MLFLOW_PORT_BACKEND}:8991'
+      - '0.0.0.0:${MLFLOW_PORT_NOTEBOOK}:8888'
+    networks: ['${NETWORK}']
+    environment:
+      MLFLOW_TRACKING_URI: 'postgresql://francisco:francisco@postgres:5432/mlflow'
+    depends_on:
+      - postgres
+    restart: always
+
+volumes:
+  elasticsearch:
+    driver: local
+  log:
+    driver: local
+
+networks:
+  franburruezo:

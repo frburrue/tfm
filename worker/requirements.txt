@@ -1,0 +1,6 @@
+pika
+sqlalchemy==1.3.13
+pymongo
+redis
+mlflow==1.10.0
+psycopg2==2.8.4
