@@ -6,18 +6,18 @@ import os
 import uuid
 import pickle
 import numpy as np
-from pymongo import MongoClient
+from mongo.mongo import MongoWrapper
 from datetime import datetime
 from keras.preprocessing import image
 
-mc = MongoClient('mongodb://192.168.1.2:60203/')
-db = mc.mlflow
 
 # dimensions of our images
 img_width, img_height = 224, 224
 
 mlflow.set_tracking_uri(os.getenv('MLFLOW_TRACKING_URI'))
 MLFLOW_CLIENT = mlflow.tracking.MlflowClient()
+
+MONGO_CLIENT = MongoWrapper()
 
 class RpcWorker:
 
@@ -68,26 +68,7 @@ class RpcWorker:
             x = image.img_to_array(img)
             x = np.expand_dims(x, axis=0)
             response['prediction'] = int(np.argmax(model.predict_proba(x)))
-            response['text'] = """\
-Ingredientes
-
-Para 30 unidades
-
-500 g de harina de trigo (4 tazas)
-70 g de azúcar (1/2 taza)
-50 g de mantequilla a temperatura ambiente
-25 g de levadura fresca (10 g de levadura seca)
-150 ml de leche
-100 ml de agua
-1 cucharadita de esencia de vainilla
-1 huevo
-4 g de sal
-Aceite para freír
-Para el glaseado:
-125 g de azúcar glas o azúcar impalpable
-3 cucharadas de agua
-1/2 cucharada de zumo de limón (jugo)
-Ralladura de limón"""
+            response['text'] = MONGO_CLIENT.get_one(model_name, response['prediction'])
 
         else:
             response = {'error': 'service unavailable'}

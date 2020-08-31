@@ -21,6 +21,8 @@ x-common-variables:
   - &credentials
     RABBITMQ_USERNAME: francisco
     RABBITMQ_PASSWORD: francisco
+    MONGO_USERNAME: francisco
+    MONGO_PASSWORD: francisco
 
 services:
 
@@ -53,6 +55,7 @@ services:
       MLFLOW_TRACKING_URI: 'postgresql://francisco:francisco@mlflow.c3uusfqnmup4.eu-west-3.rds.amazonaws.com/mlflow'
       AWS_ACCESS_KEY_ID: 'AKIAIGY6XHCMG44GVO2A'
       AWS_SECRET_ACCESS_KEY: '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'
+      MONGO_BBDD: mlflow
       <<: *common_environment_variables
       <<: *credentials
     depends_on:
