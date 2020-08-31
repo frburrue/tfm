@@ -73,14 +73,18 @@ objects:
             value: backend.tfmiot.svc.cluster.local:61001
           - name: RABBITMQ
             value: rabbitmq.tfmiot.svc.cluster.local:61004
+          - name: MONGO
+            value: mongo.tfmiot.svc.cluster.local:27017
           - name: RABBITMQ_USERNAME
             value: francisco
           - name: RABBITMQ_PASSWORD
             value: francisco
-          - name: WORKER_NUM_WORKERS
-            value: "1"
-          - name: WORKER_PORT
-            value: "61002"
+          - name: MONGO_USERNAME
+            value: francisco
+          - name: MONGO_PASSWORD
+            value: francisco
+          - name: MONGO_BBDD
+            value: mongo
           - name: LOG_CONSOLE_LEVEL
             value: info
           - name: LOG_FILE_LEVEL
