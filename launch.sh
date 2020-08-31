@@ -124,4 +124,4 @@ MLFLOW_HOST=mlflow \
 MLFLOW_PORT_UI=60260 \
 MLFLOW_PORT_BACKEND=60261 \
 MLFLOW_PORT_NOTEBOOK=60262 \
-docker-compose build backend worker
+docker-compose up --build -d backend worker rabbitmq mongo

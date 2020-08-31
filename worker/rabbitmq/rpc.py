@@ -5,13 +5,16 @@ import mlflow.keras
 import os
 import uuid
 import pickle
-from keras.preprocessing import image
 import numpy as np
+from pymongo import MongoClient
+from datetime import datetime
+from keras.preprocessing import image
+
+mc = MongoClient('mongodb://192.168.1.2:60203/')
+db = mc.mlflow
 
 # dimensions of our images
 img_width, img_height = 224, 224
-
-from datetime import datetime
 
 mlflow.set_tracking_uri(os.getenv('MLFLOW_TRACKING_URI'))
 MLFLOW_CLIENT = mlflow.tracking.MlflowClient()
