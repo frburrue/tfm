@@ -84,7 +84,7 @@ objects:
           - name: MONGO_PASSWORD
             value: francisco
           - name: MONGO_BBDD
-            value: mongo
+            value: mlflow
           - name: LOG_CONSOLE_LEVEL
             value: info
           - name: LOG_FILE_LEVEL
