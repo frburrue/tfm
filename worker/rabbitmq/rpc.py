@@ -1,9 +1,20 @@
 import pika
 import json
 import mlflow
+import mlflow.keras
 import os
-import copy
+import uuid
+import pickle
+import numpy as np
+from pymongo import MongoClient
 from datetime import datetime
+from keras.preprocessing import image
+
+mc = MongoClient('mongodb://192.168.1.2:60203/')
+db = mc.mlflow
+
+# dimensions of our images
+img_width, img_height = 224, 224
 
 mlflow.set_tracking_uri(os.getenv('MLFLOW_TRACKING_URI'))
 MLFLOW_CLIENT = mlflow.tracking.MlflowClient()
@@ -29,18 +40,57 @@ class RpcWorker:
 
     def on_request(self, ch, method, props, body):
 
-        model_name = body.decode('utf-8')
+        data = pickle.loads(body)
+        model_name = data['model']
         response = {}
         model = None # Model
 
         for mv in MLFLOW_CLIENT.search_model_versions(f"name='{model_name}'"):
             mv = dict(mv)
             if mv['current_stage'] == 'Production':
-                source = mv['source']  # Model path
                 mv['last_updated_timestamp'] = str(datetime.fromtimestamp(int(mv['last_updated_timestamp'] / 1000)))
+                if os.path.exists(mv['last_updated_timestamp']):
+                    print("Load existing model...")
+                    model = mlflow.keras.load_model(mv['last_updated_timestamp'])
+                else:
+                    print("Downloading model...")
+                    model = mlflow.keras.load_model(mv['source'])
+                    mlflow.keras.save_model(model, mv['last_updated_timestamp'])
                 print("Using model {name} v{version} ({current_stage}) updated at {last_updated_timestamp}".format(**mv))
                 response = {k: v for k, v in mv.items() if v}
                 break
+
+        if model:
+            idx = str(uuid.uuid4())
+            open(str(idx), 'wb').write(data['data'])
+            img = image.load_img(idx, target_size=(img_width, img_height))
+            os.unlink(idx)
+            x = image.img_to_array(img)
+            x = np.expand_dims(x, axis=0)
+            response['prediction'] = int(np.argmax(model.predict_proba(x)))
+            response['text'] = """\
+Ingredientes
+
+Para 30 unidades
+
+500 g de harina de trigo (4 tazas)
+70 g de azúcar (1/2 taza)
+50 g de mantequilla a temperatura ambiente
+25 g de levadura fresca (10 g de levadura seca)
+150 ml de leche
+100 ml de agua
+1 cucharadita de esencia de vainilla
+1 huevo
+4 g de sal
+Aceite para freír
+Para el glaseado:
+125 g de azúcar glas o azúcar impalpable
+3 cucharadas de agua
+1/2 cucharada de zumo de limón (jugo)
+Ralladura de limón"""
+
+        else:
+            response = {'error': 'service unavailable'}
 
         response = {
             'payload': response,

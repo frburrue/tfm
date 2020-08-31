@@ -78,7 +78,7 @@ objects:
           - name: RABBITMQ_PASSWORD
             value: francisco
           - name: BACKEND_NUM_WORKERS
-            value: "1"
+            value: "2"
           - name: BACKEND_PORT
             value: "61001"
           - name: LOG_CONSOLE_LEVEL

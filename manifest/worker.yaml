@@ -85,6 +85,12 @@ objects:
             value: francisco
           - name: MONGO_BBDD
             value: mlflow
+          - name: MLFLOW_TRACKING_URI
+            value: postgresql://francisco:francisco@mlflow.coxesqvoqcft.us-east-1.rds.amazonaws.com/mlflow
+          - name: AWS_ACCESS_KEY_ID
+            value: AKIAIGY6XHCMG44GVO2A
+          - name: AWS_SECRET_ACCESS_KEY
+            value: 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
           - name: LOG_CONSOLE_LEVEL
             value: info
           - name: LOG_FILE_LEVEL
@@ -168,14 +174,6 @@ parameters:
 - name: MEMORY_LIMIT
   description: "Maximum amount of memory that the container may consume. Unit (Mi, Gi) has to be included."
   value: "512Mi"
-  required: true
-- name: READINESS_HEALTH_ENDPOINT
-  description: "Endpoint to use by the probes for readiness healthcheck."
-  value: "/healthcheck"
-  required: true
-- name: LIVENESS_HEALTH_ENDPOINT
-  description: "Endpoint to use by the probes for liveness healthcheck."
-  value: "/healthcheck"
   required: true
 - name: PROBE_DELAY
   description: "Delay to start probing for service health."
