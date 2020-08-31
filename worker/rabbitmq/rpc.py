@@ -1,3 +1,5 @@
+print("Loading RPC module...")
+
 import pika
 import json
 import mlflow
@@ -15,9 +17,16 @@ from keras.preprocessing import image
 img_width, img_height = 224, 224
 
 mlflow.set_tracking_uri(os.getenv('MLFLOW_TRACKING_URI'))
+
+print("Connecting to MLflow...")
+
 MLFLOW_CLIENT = mlflow.tracking.MlflowClient()
 
+print("Connecting to Mongo...")
+
 MONGO_CLIENT = MongoWrapper()
+
+print("Ready")
 
 class RpcWorker:
 
