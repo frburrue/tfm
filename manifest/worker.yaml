@@ -86,7 +86,7 @@ objects:
           - name: MONGO_BBDD
             value: mlflow
           - name: MLFLOW_TRACKING_URI
-            value: postgresql://francisco:francisco@mlflow.coxesqvoqcft.us-east-1.rds.amazonaws.com/mlflow
+            value: postgresql://francisco:francisco@mlflow.c3uusfqnmup4.eu-west-3.rds.amazonaws.com/mlflow
           - name: AWS_ACCESS_KEY_ID
             value: AKIAIGY6XHCMG44GVO2A
           - name: AWS_SECRET_ACCESS_KEY

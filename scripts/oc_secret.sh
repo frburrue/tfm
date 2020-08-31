@@ -28,7 +28,7 @@ type: kubernetes.io/dockerconfigjson
 " \
 > $SECRET_FILE
 
-log "Login as system:admin ... " && oc login -u system:admin || log "Unable to connect to Openshift cluster"
+log "Login as system:admin ... " && oc login || log "Unable to connect to Openshift cluster"
 oc version
 
 log "Creating/Updating secrets and configure service account on Openshift"
