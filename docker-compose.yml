@@ -52,7 +52,9 @@ services:
     environment:
       WORKER_PORT: ${WORKER_PORT}
       WORKER_NUM_WORKERS: ${WORKER_NUM_WORKERS}
-      MLFLOW_TRACKING_URI: 'postgresql://francisco:francisco@postgres:5432/mlflow'
+      MLFLOW_TRACKING_URI: 'postgresql://francisco:francisco@mlflow.coxesqvoqcft.us-east-1.rds.amazonaws.com/mlflow'
+      AWS_ACCESS_KEY_ID: 'AKIAIGY6XHCMG44GVO2A'
+      AWS_SECRET_ACCESS_KEY: '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'
       <<: *common_environment_variables
       <<: *credentials
     depends_on:

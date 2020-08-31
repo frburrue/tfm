@@ -13,6 +13,7 @@ import sys
 import signal
 import logging
 import socket
+import pickle
 
 
 def signal_handler(signal, action):
@@ -40,28 +41,29 @@ def backend_status():
 
 health.add_check(backend_status)
 
-@app.route('/rpc/<call>', methods=['GET'])
+
+@app.route('/rpc/<call>', methods=['GET', 'POST'])
 async def rabbitmq_rpc(request, call):
     timer = Timer()
     rpc_client = get_rpc_client()
-    response = await rpc_client.call(call)
+    response = await rpc_client.call(pickle.dumps({'model': call, 'data': request.files["file"][0].body}))
     elapsed = round(timer.value(), 3)
     logging.info(json.dumps({'response': json.loads(response.decode('utf-8')), 'elapsed': elapsed}))
-    return sanic_json({"response": json.loads(response.decode('utf-8'))}, 200)
+    return sanic_json({"response": json.loads(response.decode('utf-8')), 'success': True}, 200)
 
 
-@app.route('/wq/<enqueue>', methods=['GET'])
+@app.route('/wq/<enqueue>', methods=['GET', 'POST'])
 async def rabbitmq_wq(request, enqueue):
     timer = Timer()
     wq_client = get_wq_client()
     try:
-        wq_client.enqueue(enqueue)
+        wq_client.enqueue(pickle.dumps({'label': enqueue, 'data': request.files["file"][0].body}))
         response = "OK"
     except Exception as e:
         response = str(e)
     elapsed = round(timer.value(), 3)
     logging.info(json.dumps({'response': response, 'elapsed': elapsed}))
-    return sanic_json({"response": response, "from": "{0}_{1}".format(socket.gethostname(), ID_BACKEND)}, 200)
+    return sanic_json({"response": response, 'success': True}, 200)
 
 
 @app.route('/msg/<message>', methods=['GET'])
@@ -81,11 +83,9 @@ async def rabbitmq_msg(request, message):
 @app.route('/', methods=['GET', 'POST'])
 async def home(request):
     logging.info("OK")
-    # Save image
-    open(request.files["file"][0].name, 'wb').write(request.files["file"][0].body)
     return sanic_json({"response": "Ok", "from": "{0}_{1}".format(socket.gethostname(), ID_BACKEND), 'success': True}, 200)
 
 
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", "61201"))
+    port = int(os.environ.get("PORT", "60210"))
     app.run(host='0.0.0.0', port=port, debug=False)

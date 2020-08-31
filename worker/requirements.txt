@@ -4,3 +4,7 @@ pymongo
 redis
 mlflow==1.10.0
 psycopg2==2.8.4
+boto3
+Pillow
+tensorflow
+keras

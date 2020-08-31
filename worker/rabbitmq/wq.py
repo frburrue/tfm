@@ -1,4 +1,5 @@
 import pika
+import pickle
 
 
 class WorkQueueWorker:
@@ -16,7 +17,10 @@ class WorkQueueWorker:
         self.channel.start_consuming()
 
     def callback(self, ch, method, properties, body):
-        body = body.decode('utf-8')
+
+        data = pickle.loads(body)
+        label = data['label']
+        image = data['data']
 
         ch.basic_ack(delivery_tag=method.delivery_tag)
 
