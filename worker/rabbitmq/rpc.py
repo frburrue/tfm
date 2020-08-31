@@ -77,11 +77,13 @@ class RpcWorker:
                 os.unlink(idx)
                 x = image.img_to_array(img)
                 x = np.expand_dims(x, axis=0)
-                q = model.predict(x)
-                response['prediction'] = int(np.argmax(q, axis=1))
-                response['confidence'] = q[0][response['prediction']]
-                response['item'] = MONGO_CLIENT.get_one('mapper', response['prediction'])
-                response['text'] = MONGO_CLIENT.get_one('receipts', response['prediction'])
+                try:
+                    q = model.predict(x)
+                    response['prediction'] = int(np.argmax(q))
+                    response['item'] = MONGO_CLIENT.get_one('mapper', response['prediction'])
+                    response['text'] = MONGO_CLIENT.get_one('receipts', response['prediction'])
+                except Exception as e:
+                    response = {'error': str(e)}
 
             else:
                 response = {'error': 'service unavailable'}
