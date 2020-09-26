@@ -192,11 +192,11 @@ parameters:
   required: true
 - name: PROBE_PERIOD
   description: "Liveness probe period."
-  value: "10"
+  value: "60"
   required: true
 - name: PROBE_TIMEOUT
   description: "Probes timeout."
-  value: "2"
+  value: "60"
   required: true
 labels:
   template: tfm-template-backend

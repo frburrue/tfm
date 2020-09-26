@@ -1,3 +1,5 @@
+print("Loading RPC module...")
+
 import pika
 import json
 import mlflow
@@ -10,14 +12,43 @@ from mongo.mongo import MongoWrapper
 from datetime import datetime
 from keras.preprocessing import image
 
-
+item_image = "Pizza"
+text_image = """
+Pizza
+-----
+Cantidad por 100 gramos
+Calorías 266
+Grasas totales 10 g	
+Ácidos grasos saturados 4,5 g	
+Ácidos grasos poliinsaturados 1,7 g	
+Ácidos grasos monoinsaturados 2,6 g	
+Ácidos grasos trans 0,2 g	
+Colesterol 17 mg	
+Sodio 598 mg	
+Potasio 172 mg	
+Hidratos de carbono 33 g	
+Fibra alimentaria 2,3 g	
+Azúcares 3,6 g	
+Proteínas 11 g	
+Vitamina A	358 IU	Vitamina C	1,4 mg
+Calcio	188 mg	Hierro	2,5 mg
+Vitamina D	0 IU	Vitamina B6	0,1 mg
+Vitamina B12	0,4 µg	Magnesio	24 mg
+"""
 # dimensions of our images
 img_width, img_height = 224, 224
 
 mlflow.set_tracking_uri(os.getenv('MLFLOW_TRACKING_URI'))
+
+print("Connecting to MLflow...")
+
 MLFLOW_CLIENT = mlflow.tracking.MlflowClient()
 
+print("Connecting to Mongo...")
+
 MONGO_CLIENT = MongoWrapper()
+
+print("Ready")
 
 class RpcWorker:
 
