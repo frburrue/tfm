@@ -74,7 +74,7 @@ def inference(model_path):
     # anchors
     # anchors = get_anchors(anchors_path)
 
-    for i, img_path in enumerate(["./image/cats.png"]):
+    for i, img_path in enumerate(["./image/hand.png", "./image/cat.png", "./image/cat_hand.png"]):
 
         prediction, image = detect_object(
             yolo,

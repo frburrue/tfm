@@ -1,9 +1,0 @@
-README.md
-setup.py
-keras_yolo3_pck_qqwweee.egg-info/PKG-INFO
-keras_yolo3_pck_qqwweee.egg-info/SOURCES.txt
-keras_yolo3_pck_qqwweee.egg-info/dependency_links.txt
-keras_yolo3_pck_qqwweee.egg-info/top_level.txt
-yolo3/__init__.py
-yolo3/model.py
-yolo3/utils.py
