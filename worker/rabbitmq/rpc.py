@@ -4,39 +4,12 @@ import pika
 import json
 import mlflow
 import mlflow.keras
+import boto3
 import os
-import uuid
 import pickle
-import numpy as np
+import shutil
 from mongo.mongo import MongoWrapper
 from datetime import datetime
-from keras.preprocessing import image
-
-item_image = "Pizza"
-text_image = """
-Pizza
------
-Cantidad por 100 gramos
-Calorías 266
-Grasas totales 10 g	
-Ácidos grasos saturados 4,5 g	
-Ácidos grasos poliinsaturados 1,7 g	
-Ácidos grasos monoinsaturados 2,6 g	
-Ácidos grasos trans 0,2 g	
-Colesterol 17 mg	
-Sodio 598 mg	
-Potasio 172 mg	
-Hidratos de carbono 33 g	
-Fibra alimentaria 2,3 g	
-Azúcares 3,6 g	
-Proteínas 11 g	
-Vitamina A	358 IU	Vitamina C	1,4 mg
-Calcio	188 mg	Hierro	2,5 mg
-Vitamina D	0 IU	Vitamina B6	0,1 mg
-Vitamina B12	0,4 µg	Magnesio	24 mg
-"""
-# dimensions of our images
-img_width, img_height = 224, 224
 
 mlflow.set_tracking_uri(os.getenv('MLFLOW_TRACKING_URI'))
 
@@ -49,6 +22,14 @@ print("Connecting to Mongo...")
 MONGO_CLIENT = MongoWrapper()
 
 print("Ready")
+
+def downloadDirectoryFroms3(bucketName, remoteDirectoryName):
+    s3_resource = boto3.resource('s3')
+    bucket = s3_resource.Bucket(bucketName)
+    for obj in bucket.objects.filter(Prefix = remoteDirectoryName):
+        if not os.path.exists(os.path.dirname(obj.key)):
+            os.makedirs(os.path.dirname(obj.key))
+        bucket.download_file(obj.key, obj.key)
 
 class RpcWorker:
 
@@ -78,31 +59,26 @@ class RpcWorker:
 
         for mv in MLFLOW_CLIENT.search_model_versions(f"name='{model_name}'"):
             mv = dict(mv)
-            if mv['current_stage'] == 'Production':
+            if mv['version'] == 7:
                 mv['last_updated_timestamp'] = str(datetime.fromtimestamp(int(mv['last_updated_timestamp'] / 1000)))
-                if os.path.exists(mv['last_updated_timestamp']):
+                bucket = mv['source'].split('//')[1].split('/')[0]
+                folder = mv['source'].split('//')[1].split('/')[1]
+                if os.path.exists(os.path.join('./models', folder)):
                     print("Load existing model...")
-                    model = mlflow.keras.load_model(mv['last_updated_timestamp'])
                 else:
                     print("Downloading model...")
-                    model = mlflow.keras.load_model(mv['source'])
-                    mlflow.keras.save_model(model, mv['last_updated_timestamp'])
+                    downloadDirectoryFroms3(bucket, folder)
+                    if os.path.exists('./models'):
+                        shutil.rmtree('./models')
+                    os.mkdir('./models')
+                    shutil.move(os.path.join(os.getcwd(),folder), './models')
                 print("Using model {name} v{version} ({current_stage}) updated at {last_updated_timestamp}".format(**mv))
                 response = {k: v for k, v in mv.items() if v}
                 break
 
         if model:
-            idx = str(uuid.uuid4())
-            open(str(idx), 'wb').write(data['data'])
-            img = image.load_img(idx, target_size=(img_width, img_height))
-            os.unlink(idx)
-            x = image.img_to_array(img)
-            x = np.expand_dims(x, axis=0)
-            q = model.predict_proba(x)
-            response['prediction'] = int(np.argmax(q, axis=1))
-            response['confidence'] = float(q[0][response['prediction']])
-            response['item'] = MONGO_CLIENT.get_one('foods', response['prediction'])
-            response['text'] = MONGO_CLIENT.get_one('receipts', response['prediction'])
+            # Inference
+            pass
 
         else:
             response = {'error': 'service unavailable'}

@@ -3,7 +3,6 @@ FROM python:3.7-slim
 WORKDIR /app
 
 RUN apt-get update && \
-    apt-get upgrade && \
     apt-get -y install --no-install-recommends \
     build-essential && \
     rm -rf /var/lib/apt/lists/*
