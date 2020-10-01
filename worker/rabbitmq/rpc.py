@@ -3,11 +3,14 @@ print("Loading RPC module...")
 import pika
 import json
 import mlflow
-import mlflow.keras
 import boto3
 import os
 import pickle
 import shutil
+import pandas as pd
+import numpy as np
+from utils import detect_object
+from yolo3.yolo import YOLO
 from mongo.mongo import MongoWrapper
 from datetime import datetime
 
@@ -30,6 +33,85 @@ def downloadDirectoryFroms3(bucketName, remoteDirectoryName):
         if not os.path.exists(os.path.dirname(obj.key)):
             os.makedirs(os.path.dirname(obj.key))
         bucket.download_file(obj.key, obj.key)
+
+def inference(model_path):
+
+    anchors_path = "./model_data/yolo_anchors.txt"
+    classes_path = "./model_data/data_classes.txt"
+    save_img = True
+
+    yolo = YOLO(
+        **{
+            "model_path": model_path,
+            "anchors_path": anchors_path,
+            "classes_path": classes_path,
+            "score": 0.25,
+            "gpu_num": 1,
+            "model_image_size": (416, 416),
+        }
+    )
+
+    # Make a dataframe for the prediction outputs
+    out_df = pd.DataFrame(
+        columns=[
+            "image",
+            "image_path",
+            "xmin",
+            "ymin",
+            "xmax",
+            "ymax",
+            "label",
+            "confidence",
+            "x_size",
+            "y_size",
+        ]
+    )
+
+    # labels to draw on images
+    class_file = open(classes_path, "r")
+    input_labels = [line.rstrip("\n") for line in class_file.readlines()]
+
+    # anchors
+    # anchors = get_anchors(anchors_path)
+
+    for i, img_path in enumerate(["./image/cats.png"]):
+
+        prediction, image = detect_object(
+            yolo,
+            img_path,
+            save_img=save_img,
+            save_img_path=".",
+            postfix="_catface",
+        )
+
+        y_size, x_size, _ = np.array(image).shape
+        for single_prediction in prediction:
+            out_df = out_df.append(
+                pd.DataFrame(
+                    [
+                        [
+                            os.path.basename(img_path.rstrip("\n")),
+                            img_path.rstrip("\n"),
+                        ]
+                        + single_prediction
+                        + [x_size, y_size]
+                    ],
+                    columns=[
+                        "image",
+                        "image_path",
+                        "xmin",
+                        "ymin",
+                        "xmax",
+                        "ymax",
+                        "label",
+                        "confidence",
+                        "x_size",
+                        "y_size",
+                    ],
+                )
+            )
+
+    print("Fin")
 
 class RpcWorker:
 
@@ -55,7 +137,7 @@ class RpcWorker:
         data = pickle.loads(body)
         model_name = data['model']
         response = {}
-        model = None # Model
+        model = None
 
         for mv in MLFLOW_CLIENT.search_model_versions(f"name='{model_name}'"):
             mv = dict(mv)
@@ -65,19 +147,26 @@ class RpcWorker:
                 folder = mv['source'].split('//')[1].split('/')[1]
                 if os.path.exists(os.path.join('./models', folder)):
                     print("Load existing model...")
+                    model = os.path.join(os.path.join('./models', folder), "artifacts/model/data/model.h5")
                 else:
                     print("Downloading model...")
                     downloadDirectoryFroms3(bucket, folder)
+                    model = os.path.join(os.path.join('./models', folder), "artifacts/model/data/model.h5")
                     if os.path.exists('./models'):
                         shutil.rmtree('./models')
                     os.mkdir('./models')
-                    shutil.move(os.path.join(os.getcwd(),folder), './models')
+                    shutil.move(os.path.join(os.getcwd(), folder), './models')
                 print("Using model {name} v{version} ({current_stage}) updated at {last_updated_timestamp}".format(**mv))
                 response = {k: v for k, v in mv.items() if v}
                 break
 
         if model:
             # Inference
+
+            inference(model)
+
+
+
             pass
 
         else:
