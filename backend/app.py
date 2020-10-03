@@ -49,7 +49,7 @@ async def rabbitmq_rpc(request, call):
     response = await rpc_client.call(pickle.dumps({'model': call, 'data': request.files["file"][0].body}))
     elapsed = round(timer.value(), 3)
     logging.info(json.dumps({'response': json.loads(response.decode('utf-8')), 'elapsed': elapsed}))
-    return sanic_json({"response": json.loads(response.decode('utf-8')), 'success': True}, 200)
+    return sanic_json({"response": json.loads(response.decode('utf-8')), 'success': True, 'elapsed': elapsed}, 200)
 
 
 @app.route('/wq/<enqueue>', methods=['GET', 'POST'])
@@ -63,7 +63,7 @@ async def rabbitmq_wq(request, enqueue):
         response = str(e)
     elapsed = round(timer.value(), 3)
     logging.info(json.dumps({'response': response, 'elapsed': elapsed}))
-    return sanic_json({"response": response, 'success': True}, 200)
+    return sanic_json({"response": response, 'success': True, 'elapsed': elapsed}, 200)
 
 
 @app.route('/msg/<message>', methods=['GET'])
@@ -77,7 +77,7 @@ async def rabbitmq_msg(request, message):
         response = str(e)
     elapsed = round(timer.value(), 3)
     logging.info(json.dumps({'response': response, 'elapsed': elapsed}))
-    return sanic_json({"response": response, "from": "{0}_{1}".format(socket.gethostname(), ID_BACKEND)}, 200)
+    return sanic_json({"response": response, "from": "{0}_{1}".format(socket.gethostname(), ID_BACKEND), 'elapsed': elapsed}, 200)
 
 
 @app.route('/', methods=['GET', 'POST'])

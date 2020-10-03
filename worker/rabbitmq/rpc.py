@@ -1,18 +1,31 @@
 print("Loading RPC module...")
 
+import tempfile
 import pika
 import json
+import copy
 import mlflow
 import boto3
+import base64
 import os
 import pickle
 import shutil
 import pandas as pd
 import numpy as np
+import time
 from utils import detect_object
 from yolo3.yolo import YOLO
 from mongo.mongo import MongoWrapper
 from datetime import datetime
+
+
+class Timer:
+    def __init__(self):
+        self.init_time = time.time()
+
+    def value(self):
+        return time.time() - self.init_time
+
 
 mlflow.set_tracking_uri(os.getenv('MLFLOW_TRACKING_URI'))
 
@@ -52,7 +65,7 @@ def load_model(model_path):
 
     return yolo
 
-def inference(yolo):
+def inference(yolo, image_path):
 
     anchors_path = "./model_data/yolo_anchors.txt"
     classes_path = "./model_data/data_classes.txt"
@@ -80,46 +93,37 @@ def inference(yolo):
 
     # anchors
     # anchors = get_anchors(anchors_path)
+    images = []
 
-    for i, img_path in enumerate(["./image/fran.png"]):
+    results = []
+
+    for i, img_path in enumerate([image_path]):
 
         prediction, image = detect_object(
             yolo,
             img_path,
             save_img=save_img,
-            save_img_path=".",
-            postfix="_catface",
+            save_img_path="./processed_images",
+            postfix="",
         )
-        """
-        y_size, x_size, _ = np.array(image).shape
-        for single_prediction in prediction:
-            out_df = out_df.append(
-                pd.DataFrame(
-                    [
-                        [
-                            os.path.basename(img_path.rstrip("\n")),
-                            img_path.rstrip("\n"),
-                        ]
-                        + single_prediction
-                        + [x_size, y_size]
-                    ],
-                    columns=[
-                        "image",
-                        "image_path",
-                        "xmin",
-                        "ymin",
-                        "xmax",
-                        "ymax",
-                        "label",
-                        "confidence",
-                        "x_size",
-                        "y_size",
-                    ],
-                )
-            )
-        """
 
-    print("Fin")
+        result = {'image': base64.encodebytes(open(os.path.join('./processed_images', img_path), 'rb').read()).decode("utf-8")}
+        result['predictions'] = []
+
+        y_size, x_size, _ = np.array(image).shape
+        # xmin, ymin, xmax, ymax, label, confidence
+        for single_prediction in prediction:
+            single_prediction[-1] *= 100
+            single_prediction = list(map(lambda x: int(x), single_prediction))
+            result['predictions'].append([
+                (single_prediction[0], single_prediction[1]),
+                (single_prediction[2], single_prediction[3]),
+                (single_prediction[4], single_prediction[5]),
+                (int(x_size), int(y_size)),
+                 ])
+        results.append(copy.deepcopy(result))
+
+    return results
 
 registered_models = ["Hands"]
 handlers = {"Hands": load_model}
@@ -170,33 +174,46 @@ class RpcWorker:
 
     def on_request(self, ch, method, props, body):
 
-        data = pickle.loads(body)
-        model_name = data['model']
-        model = models[model_name]
+        try:
 
-        response = {}
+            timer = Timer()
 
-        if model:
-            inference(model)
-            pass
+            data = pickle.loads(body)
+            model = models[data['model']]
+            response = {}
 
-        else:
-            response = {'error': 'service unavailable'}
+            if model:
 
-        response = {
-            'payload': response,
-            'worker_id': self.id
-        }
+                fp = tempfile.NamedTemporaryFile(suffix='.png')
+                fp.write(data['data'])
+                response['result'] = inference(model, fp.name)
 
-        self.channel.basic_publish(
-            exchange='',
-            routing_key=props.reply_to,
-            properties=pika.BasicProperties(
-                correlation_id=props.correlation_id
-            ),
-            body=json.dumps(response)
-        )
-        ch.basic_ack(delivery_tag=method.delivery_tag)
+            else:
+                response = {'error': 'service unavailable'}
+
+            elapsed = round(timer.value(), 3)
+
+        except Exception as e:
+            response = {'error': str(e)}
+
+        finally:
+            fp.close()
+
+            response = {
+                'payload': response,
+                'worker_id': self.id,
+                'elapsed': elapsed
+            }
+
+            self.channel.basic_publish(
+                exchange='',
+                routing_key=props.reply_to,
+                properties=pika.BasicProperties(
+                    correlation_id=props.correlation_id
+                ),
+                body=json.dumps(response)
+            )
+            ch.basic_ack(delivery_tag=method.delivery_tag)
 
     def release(self):
         self.connection.close()
