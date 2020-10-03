@@ -34,11 +34,10 @@ def downloadDirectoryFroms3(bucketName, remoteDirectoryName):
             os.makedirs(os.path.dirname(obj.key))
         bucket.download_file(obj.key, obj.key)
 
-def inference(model_path):
+def load_model(model_path):
 
     anchors_path = "./model_data/yolo_anchors.txt"
     classes_path = "./model_data/data_classes.txt"
-    save_img = True
 
     yolo = YOLO(
         **{
@@ -50,6 +49,14 @@ def inference(model_path):
             "model_image_size": (416, 416),
         }
     )
+
+    return yolo
+
+def inference(yolo):
+
+    anchors_path = "./model_data/yolo_anchors.txt"
+    classes_path = "./model_data/data_classes.txt"
+    save_img = True
 
     # Make a dataframe for the prediction outputs
     out_df = pd.DataFrame(
@@ -74,7 +81,7 @@ def inference(model_path):
     # anchors
     # anchors = get_anchors(anchors_path)
 
-    for i, img_path in enumerate(["./image/hand.png", "./image/cat.png", "./image/cat_hand.png"]):
+    for i, img_path in enumerate(["./image/fran.png"]):
 
         prediction, image = detect_object(
             yolo,
@@ -83,7 +90,7 @@ def inference(model_path):
             save_img_path=".",
             postfix="_catface",
         )
-
+        """
         y_size, x_size, _ = np.array(image).shape
         for single_prediction in prediction:
             out_df = out_df.append(
@@ -110,8 +117,37 @@ def inference(model_path):
                     ],
                 )
             )
+        """
 
     print("Fin")
+
+registered_models = ["Hands"]
+handlers = {"Hands": load_model}
+models = {}
+
+for model_name in registered_models:
+    model = None
+    for mv in MLFLOW_CLIENT.search_model_versions(f"name='{model_name}'"):
+        mv = dict(mv)
+        if mv['version'] == 7:
+            mv['last_updated_timestamp'] = str(datetime.fromtimestamp(int(mv['last_updated_timestamp'] / 1000)))
+            bucket = mv['source'].split('//')[1].split('/')[0]
+            folder = mv['source'].split('//')[1].split('/')[1]
+            if os.path.exists(os.path.join('./models', folder)):
+                print("Load existing model...")
+                model = os.path.join(os.path.join('./models', folder), "artifacts/model/data/model.h5")
+            else:
+                print("Downloading model...")
+                downloadDirectoryFroms3(bucket, folder)
+                model = os.path.join(os.path.join('./models', folder), "artifacts/model/data/model.h5")
+                if os.path.exists('./models'):
+                    shutil.rmtree('./models')
+                os.mkdir('./models')
+                shutil.move(os.path.join(os.getcwd(), folder), './models')
+            print("Using model {name} v{version} ({current_stage}) updated at {last_updated_timestamp}".format(**mv))
+            response = {k: v for k, v in mv.items() if v}
+            break
+    models[model_name] = handlers[model_name](model)
 
 class RpcWorker:
 
@@ -136,37 +172,12 @@ class RpcWorker:
 
         data = pickle.loads(body)
         model_name = data['model']
-        response = {}
-        model = None
+        model = models[model_name]
 
-        for mv in MLFLOW_CLIENT.search_model_versions(f"name='{model_name}'"):
-            mv = dict(mv)
-            if mv['version'] == 7:
-                mv['last_updated_timestamp'] = str(datetime.fromtimestamp(int(mv['last_updated_timestamp'] / 1000)))
-                bucket = mv['source'].split('//')[1].split('/')[0]
-                folder = mv['source'].split('//')[1].split('/')[1]
-                if os.path.exists(os.path.join('./models', folder)):
-                    print("Load existing model...")
-                    model = os.path.join(os.path.join('./models', folder), "artifacts/model/data/model.h5")
-                else:
-                    print("Downloading model...")
-                    downloadDirectoryFroms3(bucket, folder)
-                    model = os.path.join(os.path.join('./models', folder), "artifacts/model/data/model.h5")
-                    if os.path.exists('./models'):
-                        shutil.rmtree('./models')
-                    os.mkdir('./models')
-                    shutil.move(os.path.join(os.getcwd(), folder), './models')
-                print("Using model {name} v{version} ({current_stage}) updated at {last_updated_timestamp}".format(**mv))
-                response = {k: v for k, v in mv.items() if v}
-                break
+        response = {}
 
         if model:
-            # Inference
-
             inference(model)
-
-
-
             pass
 
         else:
