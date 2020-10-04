@@ -55,7 +55,7 @@ def convert_vott_csv_to_yolo(
             )
         last_image = row["image"]
     file = open(target_name, "w")
-    file.write(txt_file[1:])
+    file.write(txt_file[1:].replace("/home/francisco/Documentos/tfm", "/home/ubuntu"))
     file.close()
     return True
 

@@ -6,7 +6,6 @@ WORKDIR /workspace
 
 COPY resources .
 
-# RUN dpkg -i libcudnn7_7.6.5.32-1+cuda10.1_amd64.deb ALREADY INSTALLED
 RUN wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O Miniconda3-latest-Linux-x86_64.sh
 
 RUN chmod +x Miniconda3-latest-Linux-x86_64.sh && \

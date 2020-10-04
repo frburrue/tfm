@@ -18,7 +18,7 @@ sys.path.append(src_path)
 sys.path.append(utils_path)
 
 import argparse
-from keras_yolo3.yolo import YOLO, detect_video
+from yolo3.yolo import YOLO, detect_video
 from PIL import Image
 from timeit import default_timer as timer
 from utils import load_extractor_model, load_features, parse_input, detect_object
