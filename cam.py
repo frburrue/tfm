@@ -5,34 +5,36 @@ from PIL import Image, ImageDraw
 import tempfile
 
 def inference(image_path):
+    try:
+        url = "http://ec2-15-188-9-114.eu-west-3.compute.amazonaws.com/rpc/Hands"
 
-    url = "http://ec2-15-188-9-114.eu-west-3.compute.amazonaws.com/rpc/Hands"
+        payload = {}
+        files = [
+            ('file', open(image_path, 'rb'))
+        ]
+        headers = {}
 
-    payload = {}
-    files = [
-        ('file', open(image_path, 'rb'))
-    ]
-    headers = {}
+        response = requests.request("POST", url, headers=headers, data=payload, files=files).json()
 
-    response = requests.request("POST", url, headers=headers, data=payload, files=files).json()
+        print("Elapsed time: %d seconds" % response['elapsed'])
+        img = response['response']['payload']['result'][0]['image']
+        predictions = response['response']['payload']['result'][0]['predictions']
 
-    print("Elapsed time: %d seconds" % response['elapsed'])
-    img = response['response']['payload']['result'][0]['image']
-    predictions = response['response']['payload']['result'][0]['predictions']
+        fp = tempfile.NamedTemporaryFile()
+        fp.write(base64.b64decode(img))
 
-    fp = tempfile.NamedTemporaryFile()
-    fp.write(base64.b64decode(img))
-
-    img = Image.open(fp.name)
-    for p in predictions:
-        print("Confidence: %d Class: %d" % (p[-2][-1], p[-2][0]))
-        if p[-2][-1] > 75:
-            shape = list(map(lambda x: tuple(x), p[:2]))
-            img1 = ImageDraw.Draw(img)
-            img1.rectangle(shape, outline="red")
-    img.show()
-    fp.close()
-    print("DONE!")
+        img = Image.open(fp.name)
+        for p in predictions:
+            print("Confidence: %d Class: %d" % (p[-2][-1], p[-2][0]))
+            if p[-2][-1] > 75:
+                shape = list(map(lambda x: tuple(x), p[:2]))
+                img1 = ImageDraw.Draw(img)
+                img1.rectangle(shape, outline="red")
+        img.show()
+        fp.close()
+        print("DONE!")
+    except Exception as e:
+        print(str(e))
 
 def cam():
 
