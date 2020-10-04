@@ -1,8 +1,7 @@
-
+*.pyc
 .idea/
 
 scripts/openshift-origin-server-v3.11.0-0cbc58b-linux-64bit.tar.gz
 
-*.pyc
-/worker/models/560471c155ab4c289cf56ded25cc1c23/
-/worker/processed_images/
+worker/processed_images/
+worker/models/
