@@ -1,5 +1,3 @@
-print("Loading RPC module...")
-
 import tempfile
 import pika
 import json

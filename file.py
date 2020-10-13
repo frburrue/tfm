@@ -13,15 +13,17 @@ headers= {}
 
 response = requests.request("POST", url, headers=headers, data = payload, files = files)
 
+print("Elapsed time: %f seconds" % response['elapsed'])
 img = response.json()['response']['payload']['result'][0]['image']
 predictions = response.json()['response']['payload']['result'][0]['predictions']
 to_write = base64.b64decode(img)
+
 fp = tempfile.NamedTemporaryFile()
 fp.write(base64.b64decode(img))
 
 img = Image.open(fp.name)
-print(predictions)
 for p in predictions:
+    print("Confidence: %d Class: %d" % (p[-2][-1], p[-2][0]))
     if p[-2][-1] > 75:
         shape = list(map(lambda x: tuple(x), p[:2]))
         img1 = ImageDraw.Draw(img)
@@ -29,3 +31,5 @@ for p in predictions:
 img.show()
 
 fp.close()
+
+print("Done!")

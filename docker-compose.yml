@@ -3,9 +3,7 @@ version: '3.7'
 x-common-variables:
   - &common_environment_variables
     POSTGRES: ${POSTGRES_HOST}:5432
-    MYSQL: ${MYSQL_HOST}:3306
     MONGO: ${MONGO_HOST}:27017
-    REDIS: ${REDIS_HOST}:6379
     RABBITMQ: ${RABBITMQ_HOST}:5672
     BACKEND: ${BACKEND_HOST}:${BACKEND_PORT}
     WORKER: ${WORKER_HOST}:${WORKER_PORT}
@@ -14,10 +12,6 @@ x-common-variables:
     KIBANA: ${KIBANA_HOST}:5601
     FILEBEAT: ${FILEBEAT_HOST}:80
     GRAFANA: ${GRAFANA_HOST}:3000
-    MQTT_BROKER_MQTT: ${MQTT_BROKER_HOST}:1883
-    MQTT_BROKER_WS: ${MQTT_BROKER_HOST}:9001
-    HTTP_TO_MQTT: ${HTTP_TO_MQTT_HOST}:${HTTP_TO_MQTT_PORT}
-    HTTP_TO_LAMBDA: ${HTTP_TO_LAMBDA_HOST}:${HTTP_TO_LAMBDA_PORT}
   - &credentials
     RABBITMQ_USERNAME: francisco
     RABBITMQ_PASSWORD: francisco
@@ -92,21 +86,6 @@ services:
       - postgres
     restart: always
 
-  mysql:
-    image: mysql:8
-    hostname: ${MYSQL_HOST}
-    container_name: ${MYSQL_HOST}
-    ports:
-      - '0.0.0.0:${MYSQL_PORT}:3306'
-    networks: ['${NETWORK}']
-    volumes: ['${MYSQL_RESOURCES_PATH}:/var/lib/mysql']
-    environment:
-      MYSQL_DATABASE: default
-      MYSQL_USER: francisco
-      MYSQL_PASSWORD: francisco
-      MYSQL_ALLOW_EMPTY_PASSWORD: 1
-    restart: always
-
   mongo:
     image: mongo:4-bionic
     hostname: ${MONGO_HOST}
@@ -120,15 +99,6 @@ services:
       MONGO_INITDB_ROOT_PASSWORD: francisco
     restart: always
 
-  redis:
-    image: redis:5-alpine
-    hostname: ${REDIS_HOST}
-    container_name: ${REDIS_HOST}
-    ports:
-      - '0.0.0.0:${REDIS_PORT}:6379'
-    networks: ['${NETWORK}']
-    restart: always
-
   rabbitmq:
     image: rabbitmq:3
     hostname: ${RABBITMQ_HOST}
@@ -139,18 +109,6 @@ services:
     environment:
       RABBITMQ_DEFAULT_USER: francisco
       RABBITMQ_DEFAULT_PASS: francisco
-    restart: always
-
-  mqtt-broker:
-    image: eclipse-mosquitto:1.6.9
-    hostname: ${MQTT_BROKER_HOST}
-    container_name: ${MQTT_BROKER_HOST}
-    ports:
-      - '0.0.0.0:${MQTT_BROKER_PORT_1}:1883'
-      - '0.0.0.0:${MQTT_BROKER_PORT_2}:9001'
-    volumes:
-      - ./${MQTT_BROKER_HOST}/mosquitto.conf:/mosquitto/config/mosquitto.conf
-    networks: ['${NETWORK}']
     restart: always
 
   node-red:

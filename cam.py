@@ -27,14 +27,14 @@ def inference(image_path):
         img = Image.open(fp.name)
         for p in predictions:
             print("Confidence: %d Class: %d" % (p[-2][-1], p[-2][0]))
-            if p[-2][-1] > 75:
+            if p[-2][-1] >= 25:
                 shape = list(map(lambda x: tuple(x), p[:2]))
                 img1 = ImageDraw.Draw(img)
                 img1.rectangle(shape, outline="red")
 
         fp.close()
 
-        print("DONE!")
+        print("Done!")
 
         return np.array(img)
 
@@ -63,7 +63,7 @@ def cam():
         if key == 27: # exit on ESC
             break
         elif key == 115:
-            print("OK!")
+            print("Key pressed!")
             cv2.imwrite('this.png', frame)
             new_frame = inference('this.png')
 

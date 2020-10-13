@@ -1,5 +1,3 @@
-print("Loading RPC module...")
-
 import tempfile
 import pika
 import json
@@ -213,14 +211,12 @@ logging.addLevelName(logging.WARNING, "\033[1;31m%s\033[1;0m" % logging.getLevel
 logging.addLevelName(logging.ERROR, "\033[1;41m%s\033[1;0m" % logging.getLevelName(logging.ERROR))
 logger = logging.getLogger(__name__)
 
-logging.getLogger('pika').propagate = False
-
 health = HealthCheck(app, "/healthcheck")
 
-def backend_status():
-    return True, 'backend ok'
+def worker_status():
+    return True, 'worker ok'
 
-health.add_check(backend_status)
+health.add_check(worker_status)
 
 
 @app.route('/rpc/<call>', methods=['GET', 'POST'])
@@ -230,6 +226,7 @@ async def rabbitmq_rpc(request, call):
     elapsed = round(timer.value(), 3)
     logging.info(json.dumps({'response': json.loads(response.decode('utf-8')), 'elapsed': elapsed}))
     return sanic_json({"response": json.loads(response.decode('utf-8')), 'success': True, 'elapsed': elapsed}, 200)
+
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", "60211"))
