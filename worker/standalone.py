@@ -1,5 +1,4 @@
 import tempfile
-import pika
 import json
 import copy
 import mlflow
