@@ -1,10 +1,121 @@
 import cv2
-import numpy as np
 import requests
 import base64
-from PIL import Image, ImageDraw
 import tempfile
 import pytesseract
+from PIL import Image, ImageDraw
+import boto3
+from botocore.config import Config
+from io import BytesIO
+from pymongo import MongoClient
+import copy
+import numpy as np
+
+
+rekognition_client = boto3.client('rekognition', config=Config(
+    region_name='us-west-2',
+))
+
+mc = MongoClient("mongodb://localhost:60222", username="francisco", password="francisco")
+users_collection = mc.admin['users']
+data_collection = mc.admin['nodered']
+
+
+USERNAMES = [user['user'] for user in [copy.deepcopy(user) for user in users_collection.find({})]]
+
+
+def printDistances(distances, token1Length, token2Length):
+    for t1 in range(token1Length + 1):
+        for t2 in range(token2Length + 1):
+            print(int(distances[t1][t2]), end=" ")
+        print()
+
+def levenshteinDistanceDP(token1, token2):
+    distances = np.zeros((len(token1) + 1, len(token2) + 1))
+
+    for t1 in range(len(token1) + 1):
+        distances[t1][0] = t1
+
+    for t2 in range(len(token2) + 1):
+        distances[0][t2] = t2
+
+    a = 0
+    b = 0
+    c = 0
+
+    for t1 in range(1, len(token1) + 1):
+        for t2 in range(1, len(token2) + 1):
+            if (token1[t1 - 1] == token2[t2 - 1]):
+                distances[t1][t2] = distances[t1 - 1][t2 - 1]
+            else:
+                a = distances[t1][t2 - 1]
+                b = distances[t1 - 1][t2]
+                c = distances[t1 - 1][t2 - 1]
+
+                if (a <= b and a <= c):
+                    distances[t1][t2] = a + 1
+                elif (b <= a and b <= c):
+                    distances[t1][t2] = b + 1
+                else:
+                    distances[t1][t2] = c + 1
+
+    #printDistances(distances, len(token1), len(token2))
+    return distances[len(token1)][len(token2)]
+
+def calcDictDistance(lines, word, numWords):
+    """
+    file = open('1-1000.txt', 'r')
+    lines = file.readlines()
+    file.close()
+    """
+    dictWordDist = []
+    wordIdx = 0
+
+    for line in lines:
+        wordDistance = levenshteinDistanceDP(word, line.strip())
+        if wordDistance >= 10:
+            wordDistance = 9
+        dictWordDist.append(str(int(wordDistance)) + "-" + line.strip())
+        wordIdx = wordIdx + 1
+
+    closestWords = []
+    wordDetails = []
+    currWordDist = 0
+    dictWordDist.sort()
+    #print(dictWordDist)
+    for i in range(min(numWords, len(dictWordDist))):
+        currWordDist = dictWordDist[i]
+        wordDetails = currWordDist.split("-")
+        closestWords.append(wordDetails)
+    return closestWords
+
+def search_coincidence(rekognition_response):
+
+    neighborhood = []
+    for text in rekognition_response['TextDetections']:
+        neighborhood.append(calcDictDistance(USERNAMES, text['DetectedText'], 1)[0])
+    neighborhood.sort(key=lambda x: x[0])
+
+    id_user = None
+    for neighboor in neighborhood:
+        id_user = users_collection.find_one({"user": neighboor[1]})
+        if id_user:
+            break
+
+    return id_user
+
+
+def get_user_data(id_user):
+
+    user_data = []
+
+    if id_user:
+        messages = data_collection.find({"chatId": id_user['id']})
+        for message in messages:
+            if message['show']:
+                user_data.append(message['content'])
+
+    return user_data
 
 
 def get_iou(bb1, bb2):
@@ -78,12 +189,11 @@ def post_process(img, predictions):
 
     fp.close()
 
-    return np.array(new_img)
+    return new_img
 
+def ocr(img, preprocess=None):
 
-def ocr(img, preprocess='blur'):
-
-    image = img
+    image = np.array(img)
 
     if preprocess == 'thres':
         gray = cv2.threshold(cv2.cvtColor(image, cv2.COLOR_BGR2GRAY), 0, 255, cv2.THRESH_BINARY | cv2.THRESH_OTSU)[
@@ -99,6 +209,12 @@ def ocr(img, preprocess='blur'):
 
     return text + "\n\nFilter: (%s)" % preprocess
 
+# https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/rekognition.html#Rekognition.Client.detect_text
+def ocr_aws(img):
+
+    buffered = BytesIO()
+    img.save(buffered, format="PNG")
+    return rekognition_client.detect_text(Image={'Bytes': buffered.getvalue()})
 
 def inference(image_path):
     try:
@@ -150,7 +266,12 @@ def cam():
             img, predictions = inference('sample.jpg')
             if img and predictions:
                 new_frame = post_process(img, predictions)
-                print(ocr(new_frame))
+                rekognition_response = ocr_aws(new_frame)
+                id_user = search_coincidence(rekognition_response)
+                for item in get_user_data(id_user):
+                    print(item)
+                new_frame = np.array(new_frame)
+                # print(ocr(new_frame))
 
     cv2.destroyWindow("preview")
     cv2.destroyWindow("detection")
