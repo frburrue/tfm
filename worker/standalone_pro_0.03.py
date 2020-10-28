@@ -205,7 +205,8 @@ def post_process(img, predictions):
     best_hand_confidence = -1
     best_panels = []
     best_hand_panel_overlap = -1.0
-    selected_panel = None
+    best_hand_ok = False
+    selected_panel = -1
 
     img = Image.open(fp.name)
     img_bckp = Image.open(fp.name)
@@ -220,17 +221,22 @@ def post_process(img, predictions):
             if p[-2][0] == 0 and p[-2][-1] > best_hand_confidence:
                 best_hand_confidence = p[-2][-1]
                 best_hand.update(**{'x1': shape[0][0], 'x2': shape[1][0], 'y1': shape[0][1], 'y2': shape[1][1]})
+                best_hand_ok = True
             elif p[-2][0] == 1:
                 best_panels.append({'x1': shape[0][0], 'x2': shape[1][0], 'y1': shape[0][1], 'y2': shape[1][1]})
 
-    for idx, panel in enumerate(best_panels):
-        iou = get_iou(best_hand, panel)
-        if best_hand_panel_overlap < iou:
-            best_hand_panel_overlap = iou
-            selected_panel = idx
+    if best_hand_ok:
+        for idx, panel in enumerate(best_panels):
+            iou = get_iou(best_hand, panel)
+            if best_hand_panel_overlap < iou:
+                best_hand_panel_overlap = iou
+                selected_panel = idx
 
-    panel = best_panels[selected_panel]
-    new_img = img_bckp.crop((panel['x1'], panel['y1'], panel['x2'], panel['y2']))
+    if selected_panel >= 0:
+        panel = best_panels[selected_panel]
+        new_img = img_bckp.crop((panel['x1'], panel['y1'], panel['x2'], panel['y2']))
+    else:
+        new_img = None
 
     fp.close()
 
@@ -261,10 +267,10 @@ def ocr_aws(img):
     img.save(buffered, format="PNG")
     return rekognition_client.detect_text(Image={'Bytes': buffered.getvalue()})
 
-def inference(response):
+def inference_response(response):
     try:
-        img = response['response']['payload']['result'][0]['image']
-        predictions = response['response']['payload']['result'][0]['predictions']
+        img = response['payload']['result'][0]['image']
+        predictions = response['payload']['result'][0]['predictions']
 
     except Exception as e:
         print(str(e))
@@ -420,7 +426,7 @@ def on_request(body):
             'elapsed': elapsed
         }
 
-        return json.dumps(response).encode()
+        return response
 
 
 def signal_handler(signal, action):
@@ -453,18 +459,52 @@ async def rabbitmq_rpc(request, call):
     timer = Timer()
     response = on_request(pickle.dumps({'model': call, 'data': request.files["file"][0].body}))
 
-    img, predictions = inference(response)
+    import base64
+    from io import BytesIO
+
+    messages = []
+
+    img, predictions = inference_response(response)
+
     if img and predictions:
+
         new_frame = post_process(img, predictions)
-        rekognition_response = ocr_aws(new_frame)
-        id_user = search_coincidence(rekognition_response)
-        for item in get_user_data(id_user):
-            print(item)
-        new_frame = np.array(new_frame)
+
+        if new_frame:
+
+            buffered = BytesIO()
+            new_frame.save(buffered, format="PNG")
+            img_str = base64.b64encode(buffered.getvalue()).decode('utf-8')
+            buffered.close()
+
+            rekognition_response = ocr_aws(new_frame)
+            user = search_coincidence(rekognition_response)
+            for item in get_user_data(user):
+                messages.append(item)
+
+            if isinstance(user, dict) and 'user' in user:
+                user = user['user']
+                if not len(messages):
+                    messages.apppend("No hay mensajes disponibles...")
+
+            else:
+                user = None
+                messages.apppend("No se ha encontrado usuario...")
+
+        else:
+            img_str = None
+            user = None
+            messages.append("Nada detectado...")
+
+    response['payload'] = {
+        'detection': img_str,
+        'user': user,
+        'messages': messages
+    }
 
     elapsed = round(timer.value(), 3)
-    logging.info(json.dumps({'response': json.loads(response.decode('utf-8')), 'elapsed': elapsed}))
-    return sanic_json({"response": json.loads(response.decode('utf-8')), 'success': True, 'elapsed': elapsed}, 200)
+    logging.info(json.dumps({'response': response, 'elapsed': elapsed}))
+    return sanic_json({"response": response, 'success': True, 'elapsed': elapsed}, 200)
 
 
 if __name__ == "__main__":
