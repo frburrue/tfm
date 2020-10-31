@@ -86,9 +86,10 @@ def search_coincidence(data):
     id_user = None
 
     for neighboor in neighborhood:
-        id_user = MONGO_CLIENT.get_one(USERS_COLLECTION, {"user": neighboor[1]})
-        if id_user:
-            break
+        if float(neighboor[0]) < (len(neighboor[1])*2)/5:
+            id_user = MONGO_CLIENT.get_one(USERS_COLLECTION, {"user": neighboor[1]})
+            if id_user:
+                break
 
     return id_user
 

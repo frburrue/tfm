@@ -53,6 +53,9 @@ async def rabbitmq_rpc(request, call):
     response_detection = inference_request(pickle.dumps({'model': call, 'data': request.files["file"][0].body}))
     img, predictions = inference_response(response_detection)
 
+    response_rekogntion = None
+    processing_response = None
+
     if img and predictions:
 
         response_rekogntion = rekognition_request(request.files["file"][0].body, predictions)
