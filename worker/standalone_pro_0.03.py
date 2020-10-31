@@ -61,12 +61,12 @@ rekognition_client = boto3.client('rekognition', config=Config(
     region_name='us-west-2',
 ))
 
-mc = MongoClient("mongodb://thewhitehonet.ddns.net:60222", username="francisco", password="francisco")
-users_collection = mc.admin['users']
-data_collection = mc.admin['nodered']
+
+USERS_COLLECTION = 'users'
+DATA_COLLECTION = 'node_red'
 
 
-USERNAMES = [user['user'] for user in [copy.deepcopy(user) for user in users_collection.find({})]]
+USERNAMES = [user['user'] for user in [copy.deepcopy(user) for user in MONGO_CLIENT.get_many(USERS_COLLECTION, {})]]
 
 
 def printDistances(distances, token1Length, token2Length):
@@ -143,7 +143,7 @@ def search_coincidence(rekognition_response):
 
     id_user = None
     for neighboor in neighborhood:
-        id_user = users_collection.find_one({"user": neighboor[1]})
+        id_user = MONGO_CLIENT.get_one(USERS_COLLECTION, {"user": neighboor[1]})
         if id_user:
             break
 
@@ -155,7 +155,7 @@ def get_user_data(id_user):
     user_data = []
 
     if id_user:
-        messages = data_collection.find({"chatId": id_user['id']})
+        messages = MONGO_CLIENT.get_many(DATA_COLLECTION, {"chatId": id_user['id']})
         for message in messages:
             if message['show']:
                 user_data.append(message['content'])
@@ -458,9 +458,6 @@ health.add_check(worker_status)
 async def rabbitmq_rpc(request, call):
     timer = Timer()
     response = on_request(pickle.dumps({'model': call, 'data': request.files["file"][0].body}))
-
-    import base64
-    from io import BytesIO
 
     messages = []
 
