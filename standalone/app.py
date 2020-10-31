@@ -76,5 +76,5 @@ async def rabbitmq_rpc(request, call):
 
 
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", "60211"))
+    port = int(os.environ.get("PORT", "60212"))
     app.run(host='0.0.0.0', port=port, debug=False)

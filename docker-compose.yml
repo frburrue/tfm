@@ -47,8 +47,6 @@ services:
     networks: ['${NETWORK}']
     environment:
       MLFLOW_TRACKING_URI: 'postgresql://francisco:francisco@mlflow.c3uusfqnmup4.eu-west-3.rds.amazonaws.com/mlflow'
-      AWS_ACCESS_KEY_ID: 'AKIAIGY6XHCMG44GVO2A'
-      AWS_SECRET_ACCESS_KEY: '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'
       MONGO_BBDD: mlflow
       <<: *common_environment_variables
       <<: *credentials
@@ -183,6 +181,17 @@ services:
       MLFLOW_TRACKING_URI: 'postgresql://francisco:francisco@mlflow.c3uusfqnmup4.eu-west-3.rds.amazonaws.com/mlflow'
     depends_on:
       - postgres
+    restart: always
+
+  standalone:
+    build: standalone
+    hostname: standalone
+    container_name: standalone
+    ports:
+      - '0.0.0.0:${STANDALONE_PORT}:${STANDALONE_PORT}'
+    networks: [ '${NETWORK}' ]
+    environment:
+      MLFLOW_TRACKING_URI: 'postgresql://francisco:francisco@mlflow.c3uusfqnmup4.eu-west-3.rds.amazonaws.com/mlflow'
     restart: always
 
 volumes:
