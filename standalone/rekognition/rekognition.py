@@ -9,6 +9,7 @@ from io import BytesIO
 from botocore.config import Config
 
 from common.common import Timer
+from .utils import RekognitionTextParser, show_rekognition_polygons
 
 
 REKOGNITION_CLIENT = boto3.client('rekognition', config=Config(
@@ -137,6 +138,13 @@ def rekognition_request(img, predictions):
 
         buffered = BytesIO()
         new_frame.save(buffered, format="PNG")
+        
+        polygons = [RekognitionTextParser(item).to_dict()['polygon'] for item in text['TextDetections']]
+        new_frame = show_rekognition_polygons(buffered.getvalue(), polygons, 'yellow')
+        
+        buffered = BytesIO()
+        new_frame.save(buffered, format="PNG")
+        
         img_str = base64.b64encode(buffered.getvalue()).decode('utf-8')
         buffered.close()
 

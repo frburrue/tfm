@@ -15,6 +15,7 @@ from detection.detection import update_model_detection, inference_request, infer
 from rekognition.rekognition import rekognition_request, rekognition_response
 from processing.processing import process
 
+print(os.getcwd())
 
 update_models()
 update_model_detection()
