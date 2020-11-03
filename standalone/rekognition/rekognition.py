@@ -13,7 +13,7 @@ from .utils import RekognitionTextParser, show_rekognition_polygons
 
 
 REKOGNITION_CLIENT = boto3.client('rekognition', config=Config(
-    region_name='us-west-2',
+    region_name='eu-west-2',
 ))
 
 
