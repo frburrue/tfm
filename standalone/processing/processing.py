@@ -76,11 +76,11 @@ def calcDictDistance(lines, word, numWords):
     return closestWords
 
 
-def search_coincidence(data):
+def search_match(data):
 
     neighborhood = []
     for text in data['TextDetections']:
-        neighborhood.append(calcDictDistance(USERNAMES, text['DetectedText'], 1)[0])
+        neighborhood.append(calcDictDistance(USERNAMES, text['DetectedText'], 1)[0] + [text['DetectedText']]) 
     neighborhood.sort(key=lambda x: x[0])
 
     id_user = None
@@ -91,7 +91,7 @@ def search_coincidence(data):
             if id_user:
                 break
 
-    return id_user
+    return id_user, neighborhood
 
 
 def get_user_data(id_user):
@@ -113,7 +113,7 @@ def process(data):
 
     messages = []
 
-    user = search_coincidence(data)
+    user, neighborhood = search_match(data)
     user_data = get_user_data(user)
 
     for data in user_data:
@@ -132,6 +132,7 @@ def process(data):
     response = {
         'payload': {
             'user': user,
+            'matches': neighborhood,
             'messages': messages
         },
         'elapsed': elapsed
