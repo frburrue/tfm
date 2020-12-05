@@ -9,8 +9,6 @@ MONGO_CLIENT = MongoWrapper()
 USERS_COLLECTION = 'users'
 DATA_COLLECTION = 'nodered'
 
-USERNAMES = [user['user'] for user in [copy.deepcopy(user) for user in MONGO_CLIENT.get_many(USERS_COLLECTION, {})]]
-
 
 def printDistances(distances, token1Length, token2Length):
     for t1 in range(token1Length + 1):
@@ -55,32 +53,29 @@ def levenshteinDistanceDP(token1, token2):
 def calcDictDistance(lines, word, numWords):
 
     dictWordDist = []
-    wordIdx = 0
 
     for line in lines:
         wordDistance = levenshteinDistanceDP(word, line.strip())
         if wordDistance >= 10:
             wordDistance = 9
-        dictWordDist.append(str(int(wordDistance)) + "-" + line.strip())
-        wordIdx = wordIdx + 1
+        dictWordDist.append((int(wordDistance), line.strip()))
 
     closestWords = []
-    wordDetails = []
-    currWordDist = 0
-    dictWordDist.sort()
-    #print(dictWordDist)
+    dictWordDist.sort(key=lambda x: x[0])
+
     for i in range(min(numWords, len(dictWordDist))):
-        currWordDist = dictWordDist[i]
-        wordDetails = currWordDist.split("-")
-        closestWords.append(wordDetails)
+        closestWords.append(list(dictWordDist[i]))
+
     return closestWords
 
 
 def search_match(data):
 
+    usernames = [user['user'] for user in [copy.deepcopy(user) for user in MONGO_CLIENT.get_many(USERS_COLLECTION, {})]]
+
     neighborhood = []
     for text in data['TextDetections']:
-        neighborhood.append(calcDictDistance(USERNAMES, text['DetectedText'], 1)[0] + [text['DetectedText']]) 
+        neighborhood.append(calcDictDistance(usernames, text['DetectedText'], 1)[0] + [text['DetectedText']])
     neighborhood.sort(key=lambda x: x[0])
 
     id_user = None
