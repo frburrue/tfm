@@ -46,7 +46,7 @@ health.add_check(worker_status)
 
 
 @app.route('/detection', methods=['POST'])
-async def detection(request, call):
+async def detection(request):
 
     timer = Timer()
     global_response = {}
@@ -55,7 +55,7 @@ async def detection(request, call):
     if update_status['Hands']:
         update_model_detection()
 
-    response_detection = inference_request(pickle.dumps({'model': call, 'data': request.files["file"][0].body}))
+    response_detection = inference_request(pickle.dumps({'model': 'Hands', 'data': request.files["file"][0].body}))
     img, predictions = inference_response(response_detection)
 
     response_rekogntion = None
