@@ -26,19 +26,6 @@ services:
       POSTGRES_PASSWORD: francisco
     restart: always
 
-  pgadmin:
-    image: dpage/pgadmin4:4.24
-    hostname: ${PGADMIN_HOST}
-    container_name: ${PGADMIN_HOST}
-    ports:
-      - "0.0.0.0:${PGADMIN_PORT}:80"
-    networks: ['${NETWORK}']
-    volumes: ['${PGADMIN_RESOURCES_PATH}:/var/lib/pgadmin']
-    environment:
-      PGADMIN_DEFAULT_EMAIL: "franciscoburruezo@live.com"
-      PGADMIN_DEFAULT_PASSWORD: "francisco"
-    restart: always
-
   mongo:
     image: mongo:4-bionic
     hostname: ${MONGO_HOST}
