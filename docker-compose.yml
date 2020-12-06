@@ -68,7 +68,7 @@ services:
   mlflow-environment:
     build: ./${MLFLOW_HOST}/mlflow-environment
     hostname: mflow-environment
-    container_name: mflow-environment
+    container_name: mlflow-environment
     ports:
       - '0.0.0.0:${MLFLOW_PORT_UI}:8990'
       - '0.0.0.0:${MLFLOW_PORT_NOTEBOOK}:8888'
