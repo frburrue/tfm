@@ -48,8 +48,6 @@ services:
     networks: ['${NETWORK}']
     volumes:
       - ${NODE_RED_RESOURCES_PATH}:/data
-    environment:
-      <<: *common_environment_variables
     restart: always
 
   mlflow-environment:
@@ -73,8 +71,6 @@ services:
       - '0.0.0.0:${STANDALONE_PORT}:${STANDALONE_PORT}'
     networks: [ '${NETWORK}' ]
     environment:
-      <<: *common_environment_variables
-      <<: *credentials
       MLFLOW_TRACKING_URI: 'postgresql://francisco:francisco@mlflow.c3uusfqnmup4.eu-west-3.rds.amazonaws.com/mlflow'
       MONGO_EC2: 'ec2-15-188-9-114.eu-west-3.compute.amazonaws.com:${MONGO_PORT}'
       MONGO_BBDD: 'admin'
