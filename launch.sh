@@ -66,4 +66,4 @@ NODE_RED_PORT=60250 \
 MLFLOW_HOST=mlflow \
 MLFLOW_PORT_UI=60260 \
 MLFLOW_PORT_NOTEBOOK=60261 \
-docker-compose up --build -d pgadmin mlflow-environment
+docker-compose up --build -d standalone mongo node-red mlflow-environment
