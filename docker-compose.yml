@@ -37,8 +37,6 @@ services:
     environment:
       PGADMIN_DEFAULT_EMAIL: "franciscoburruezo@live.com"
       PGADMIN_DEFAULT_PASSWORD: "francisco"
-    depends_on:
-      - postgres
     restart: always
 
   mongo:
@@ -78,8 +76,6 @@ services:
     environment:
       MLFLOW_TRACKING_URI: 'postgresql://francisco:francisco@mlflow.c3uusfqnmup4.eu-west-3.rds.amazonaws.com/mlflow'
       MLFLOW_ARTIFACTS_PATH: 's3://mlflow-tfm'
-    depends_on:
-      - postgres
     restart: always
 
   standalone:
