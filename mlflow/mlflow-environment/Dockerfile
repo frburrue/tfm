@@ -14,7 +14,6 @@ RUN wget --quiet https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86
     conda create --name mlflow python=3.7 && \
     echo ". /usr/local/bin/conda" >> ~/.bashrc && \
     echo "conda activate mlflow" >> ~/.bashrc && \
-    rm /usr/local/bin/python && \
     ln -s /miniconda3/envs/mlflow/bin/python /usr/local/bin/python
 
 COPY requirements.txt .
