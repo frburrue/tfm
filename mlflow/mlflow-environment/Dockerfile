@@ -1,5 +1,7 @@
 FROM ubuntu:20.04
 
+ENV DEBIAN_FRONTEND=noninteractive
+
 WORKDIR /app
 
 RUN apt-get update && apt-get install -y build-essential wget nano libpq-dev libsm6 libxext6 libxrender-dev libglib2.0-0 git
