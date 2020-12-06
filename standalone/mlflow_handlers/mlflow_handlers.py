@@ -4,6 +4,7 @@ import shutil
 import boto3
 from datetime import datetime
 
+
 S3_CLIENT = boto3.resource('s3')
 
 mlflow.set_tracking_uri(os.getenv('MLFLOW_TRACKING_URI'))
@@ -13,11 +14,11 @@ REGISTERED_MODELS = ["Hands"]
 MODELS = {}
 
 
-def downlod_model(bucketName, remoteDirectoryName):
+def downlod_model(bucket_name, remoteDirectory_name):
 
-    bucket = S3_CLIENT.Bucket(bucketName)
+    bucket = S3_CLIENT.Bucket(bucket_name)
 
-    for obj in bucket.objects.filter(Prefix=remoteDirectoryName):
+    for obj in bucket.objects.filter(Prefix=remoteDirectory_name):
         if not os.path.exists(os.path.dirname(obj.key)):
             os.makedirs(os.path.dirname(obj.key))
         bucket.download_file(obj.key, obj.key)
@@ -25,11 +26,14 @@ def downlod_model(bucketName, remoteDirectoryName):
 
 def update_models():
 
+    update = {}
+
     for model_name in REGISTERED_MODELS:
         model = None
+        update[model_name] = 0
         for mv in MLFLOW_CLIENT.search_model_versions(f"name='{model_name}'"):
             mv = dict(mv)
-            if mv['version'] == 7:
+            if mv['current_stage'] == 'Production':
                 mv['last_updated_timestamp'] = str(datetime.fromtimestamp(int(mv['last_updated_timestamp'] / 1000)))
                 bucket = mv['source'].split('//')[1].split('/')[0]
                 folder = mv['source'].split('//')[1].split('/')[1]
@@ -44,11 +48,14 @@ def update_models():
                         shutil.rmtree('./models')
                     os.mkdir('./models')
                     shutil.move(os.path.join(os.getcwd(), folder), './models')
+                    update[model_name] = 1
                 print("Using model {name} v{version} ({current_stage}) updated at {last_updated_timestamp}".format(**mv))
                 #response = {k: v for k, v in mv.items() if v}
                 break
         if model:
             MODELS[model_name] = model
+
+    return update
 
 
 def get_model(model_name):

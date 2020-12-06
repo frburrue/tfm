@@ -1,6 +1,7 @@
 from PIL import Image, ImageDraw
 from io import BytesIO
 
+
 class RekognitionTextParser:
     """Encapsulates an Amazon Rekognition text element."""
     def __init__(self, text_data):

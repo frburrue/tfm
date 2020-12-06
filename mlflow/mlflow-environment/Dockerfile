@@ -1,21 +1,23 @@
-FROM tensorflow/tensorflow:2.2.0-gpu-jupyter
-
-RUN apt install wget
-
-WORKDIR /workspace
-
-COPY resources .
-
-RUN wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O Miniconda3-latest-Linux-x86_64.sh
-
-RUN chmod +x Miniconda3-latest-Linux-x86_64.sh && \
- ./Miniconda3-latest-Linux-x86_64.sh -b -p /workspace/miniconda3 && \
- /workspace/miniconda3/bin/conda init bash && \
- /workspace/miniconda3/bin/conda create --name mlflow python=3.7 && \
- /workspace/miniconda3/bin/conda install --name mlflow -c conda-forge/label/cf202003 mlflow && \
- /workspace/miniconda3/bin/conda install --name mlflow psycopg2
-ENV PATH="/workspace/miniconda3/bin:$PATH"
+FROM ubuntu:20.04
 
 WORKDIR /app
 
-RUN apt-get update && apt-get install -y nano libsm6 libxext6 libxrender-dev
+RUN apt-get update && apt-get install -y build-essential wget nano libpq-dev libsm6 libxext6 libxrender-dev libglib2.0-0 git
+
+RUN wget --quiet https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O ./Miniconda3-latest-Linux-x86_64.sh && \
+    /bin/bash ./Miniconda3-latest-Linux-x86_64.sh -b -p /miniconda3 && \
+    rm Miniconda3-latest-Linux-x86_64.sh && \
+    ln -s /miniconda3/bin/conda /usr/local/bin/conda && \
+    conda init && \
+    conda create --name mlflow python=3.7 && \
+    echo ". /usr/local/bin/conda" >> ~/.bashrc && \
+    echo "conda activate mlflow" >> ~/.bashrc && \
+    rm /usr/local/bin/python && \
+    ln -s /miniconda3/envs/mlflow/bin/python /usr/local/bin/python
+
+COPY requirements.txt .
+RUN /miniconda3/envs/mlflow/bin/pip install --no-cache-dir -r requirements.txt
+
+COPY . .
+
+ENTRYPOINT ["/bin/sh", "docker_entrypoint.sh"]

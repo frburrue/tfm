@@ -4,55 +4,12 @@ x-common-variables:
   - &common_environment_variables
     POSTGRES: ${POSTGRES_HOST}:5432
     MONGO: ${MONGO_HOST}:27017
-    RABBITMQ: ${RABBITMQ_HOST}:5672
-    BACKEND: ${BACKEND_HOST}:${BACKEND_PORT}
-    WORKER: ${WORKER_HOST}:${WORKER_PORT}
     NODERED: ${NODE_RED_HOST}:1880
-    ELASTICSEARCH: ${ELASTICSEARCH_HOST}:9200
-    KIBANA: ${KIBANA_HOST}:5601
-    FILEBEAT: ${FILEBEAT_HOST}:80
-    GRAFANA: ${GRAFANA_HOST}:3000
   - &credentials
-    RABBITMQ_USERNAME: francisco
-    RABBITMQ_PASSWORD: francisco
     MONGO_USERNAME: francisco
     MONGO_PASSWORD: francisco
 
 services:
-
-  backend:
-    hostname: ${BACKEND_HOST}
-    container_name: ${BACKEND_HOST}
-    build: ./${BACKEND_HOST}
-    ports:
-      - '0.0.0.0:${BACKEND_PORT}:${BACKEND_PORT}'
-    networks: ['${NETWORK}']
-    volumes:
-      - ${LOG_VOLUME}:${LOG_MOUNTPOINT}
-    environment:
-      BACKEND_PORT: ${BACKEND_PORT}
-      BACKEND_NUM_WORKERS: ${BACKEND_NUM_WORKERS}
-      <<: *common_environment_variables
-      <<: *credentials
-    depends_on:
-      - rabbitmq
-    restart: always
-
-  worker:
-    hostname: ${WORKER_HOST}
-    container_name: ${WORKER_HOST}
-    build: ./${WORKER_HOST}
-    ports:
-      - '0.0.0.0:${WORKER_PORT}:${WORKER_PORT}'
-    networks: ['${NETWORK}']
-    environment:
-      MLFLOW_TRACKING_URI: 'postgresql://francisco:francisco@mlflow.c3uusfqnmup4.eu-west-3.rds.amazonaws.com/mlflow'
-      MONGO_BBDD: mlflow
-      <<: *common_environment_variables
-      <<: *credentials
-    depends_on:
-      - backend
-    restart: always
 
   postgres:
     image: postgres:12
@@ -97,18 +54,6 @@ services:
       MONGO_INITDB_ROOT_PASSWORD: francisco
     restart: always
 
-  rabbitmq:
-    image: rabbitmq:3
-    hostname: ${RABBITMQ_HOST}
-    container_name: ${RABBITMQ_HOST}
-    ports:
-      - '0.0.0.0:${RABBITMQ_PORT}:5672'
-    networks: ['${NETWORK}']
-    environment:
-      RABBITMQ_DEFAULT_USER: francisco
-      RABBITMQ_DEFAULT_PASS: francisco
-    restart: always
-
   node-red:
     hostname: ${NODE_RED_HOST}
     container_name: ${NODE_RED_HOST}
@@ -122,63 +67,17 @@ services:
       <<: *common_environment_variables
     restart: always
 
-  elasticsearch:
-    image: docker.elastic.co/elasticsearch/elasticsearch:7.6.2
-    hostname: ${ELASTICSEARCH_HOST}
-    container_name: ${ELASTICSEARCH_HOST}
-    ports:
-      - '0.0.0.0:${ELASTICSEARCH_PORT}:9200'
-    networks: ['${NETWORK}']
-    volumes:
-      - ${ELASTICSEARCH_VOLUME}:/usr/share/elasticsearch/data
-    environment:
-      cluster.name: ${ELASTICSEARCH_HOST}
-      node.name: ${ELASTICSEARCH_HOST}
-      discovery.type: single-node
-      bootstrap.memory_lock: 'true'
-      ES_JAVA_OPTS: "-Xms512m -Xmx512m"
-    ulimits:
-      memlock:
-        soft: -1
-        hard: -1
-    restart: always
-
-  kibana:
-    image: docker.elastic.co/kibana/kibana-oss:7.6.2
-    hostname: ${KIBANA_HOST}
-    container_name: ${KIBANA_HOST}
-    ports:
-      - '0.0.0.0:${KIBANA_PORT}:5601'
-    networks: ['${NETWORK}']
-    depends_on: 
-      - elasticsearch
-    environment:
-      SERVER_NAME: ${KIBANA_HOST}
-      ELASTICSEARCH_HOSTS: http://${ELASTICSEARCH_HOST}:9200
-    restart: always
-
-  filebeat:
-    hostname: ${FILEBEAT_HOST}
-    container_name: ${FILEBEAT_HOST}
-    build: ./${FILEBEAT_HOST}
-    ports:
-      - '0.0.0.0:${FILEBEAT_PORT}:80'
-    networks: ['${NETWORK}']
-    volumes:
-      - ${LOG_VOLUME}:${LOG_MOUNTPOINT}
-    restart: always
-
   mlflow-environment:
     build: ./${MLFLOW_HOST}/mlflow-environment
     hostname: mflow-environment
     container_name: mflow-environment
     ports:
       - '0.0.0.0:${MLFLOW_PORT_UI}:8990'
-      - '0.0.0.0:${MLFLOW_PORT_BACKEND}:8991'
       - '0.0.0.0:${MLFLOW_PORT_NOTEBOOK}:8888'
     networks: ['${NETWORK}']
     environment:
       MLFLOW_TRACKING_URI: 'postgresql://francisco:francisco@mlflow.c3uusfqnmup4.eu-west-3.rds.amazonaws.com/mlflow'
+      MLFLOW_ARTIFACTS_PATH: 's3://mlflow-tfm'
     depends_on:
       - postgres
     restart: always
@@ -191,14 +90,12 @@ services:
       - '0.0.0.0:${STANDALONE_PORT}:${STANDALONE_PORT}'
     networks: [ '${NETWORK}' ]
     environment:
+      <<: *common_environment_variables
+      <<: *credentials
       MLFLOW_TRACKING_URI: 'postgresql://francisco:francisco@mlflow.c3uusfqnmup4.eu-west-3.rds.amazonaws.com/mlflow'
+      MONGO_EC2: 'ec2-15-188-9-114.eu-west-3.compute.amazonaws.com:${MONGO_PORT}'
+      MONGO_BBDD: 'admin'
     restart: always
-
-volumes:
-  elasticsearch:
-    driver: local
-  log:
-    driver: local
 
 networks:
   franburruezo:

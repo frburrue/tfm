@@ -1,9 +1,8 @@
-from mongo.mongo import MongoWrapper
 import copy
 import numpy as np
 
+from mongo.mongo import MongoWrapper
 from common.common import Timer
-
 
 MONGO_CLIENT = MongoWrapper()
 USERS_COLLECTION = 'users'
@@ -46,7 +45,6 @@ def levenshteinDistanceDP(token1, token2):
                 else:
                     distances[t1][t2] = c + 1
 
-    #printDistances(distances, len(token1), len(token2))
     return distances[len(token1)][len(token2)]
 
 

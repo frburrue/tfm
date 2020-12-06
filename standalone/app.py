@@ -45,11 +45,15 @@ def worker_status():
 health.add_check(worker_status)
 
 
-@app.route('/rpc/<call>', methods=['GET', 'POST'])
-async def rabbitmq_rpc(request, call):
+@app.route('/detection', methods=['POST'])
+async def detection(request, call):
 
     timer = Timer()
     global_response = {}
+
+    update_status = update_models()
+    if update_status['Hands']:
+        update_model_detection()
 
     response_detection = inference_request(pickle.dumps({'model': call, 'data': request.files["file"][0].body}))
     img, predictions = inference_response(response_detection)
@@ -77,5 +81,5 @@ async def rabbitmq_rpc(request, call):
 
 
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", "60212"))
+    port = int(os.environ.get("PORT", "60210"))
     app.run(host='0.0.0.0', port=port, debug=False)
