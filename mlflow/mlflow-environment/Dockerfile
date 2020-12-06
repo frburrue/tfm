@@ -19,8 +19,7 @@ RUN wget --quiet https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86
 COPY requirements.txt .
 RUN /miniconda3/envs/mlflow/bin/pip install --no-cache-dir -r requirements.txt
 
-RUN ln -s /miniconda3/envs/mlflow/bin/mlflow /usr/local/bin/mlflow \
-    ln -s /miniconda3/envs/mlflow/bin/gunicorn /usr/local/bin/gunicorn
+RUN ln -s /miniconda3/envs/mlflow/bin/mlflow /usr/local/bin/mlflow
 
 COPY . .
 
