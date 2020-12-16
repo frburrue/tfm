@@ -63,7 +63,10 @@ MONGO_RESOURCES_PATH=${MONGO_RESOURCES_PATH} \
 NODE_RED_RESOURCES_PATH=${NODE_RED_RESOURCES_PATH} \
 NODE_RED_HOST=node-red \
 NODE_RED_PORT=60250 \
+MQTT_BROKER_HOST=mqtt_broker \
+MQTT_BROKER_PORT_1=60251 \
+MQTT_BROKER_PORT_2=60252 \
 MLFLOW_HOST=mlflow \
 MLFLOW_PORT_UI=60260 \
 MLFLOW_PORT_NOTEBOOK=60261 \
-docker-compose up --build -d standalone mongo node-red mlflow-environment
+docker-compose up --build -d standalone mongo node-red mqtt-broker mlflow-environment

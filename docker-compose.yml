@@ -4,10 +4,6 @@ x-common-variables:
   - &common_environment_variables
     POSTGRES: ${POSTGRES_HOST}:5432
     MONGO: ${MONGO_HOST}:27017
-    NODERED: ${NODE_RED_HOST}:1880
-  - &credentials
-    MONGO_USERNAME: francisco
-    MONGO_PASSWORD: francisco
 
 services:
 
@@ -48,6 +44,18 @@ services:
     networks: ['${NETWORK}']
     volumes:
       - ${NODE_RED_RESOURCES_PATH}:/data
+    restart: always
+
+  mqtt-broker:
+    image: eclipse-mosquitto:1.6.9
+    hostname: ${MQTT_BROKER_HOST}
+    container_name: ${MQTT_BROKER_HOST}
+    ports:
+      - '0.0.0.0:${MQTT_BROKER_PORT_1}:1883'
+      - '0.0.0.0:${MQTT_BROKER_PORT_2}:9001'
+    volumes:
+      - ./${MQTT_BROKER_HOST}/mosquitto.conf:/mosquitto/config/mosquitto.conf
+    networks: [ '${NETWORK}' ]
     restart: always
 
   mlflow-environment:
