@@ -101,10 +101,10 @@ def preprocess(img, predictions):
 
             if p[-2][0] == 0 and p[-2][-1] > best_hand_confidence:
                 best_hand_confidence = p[-2][-1]
-                best_hand.update(**{'x1': shape[0][0], 'x2': shape[1][0], 'y1': shape[0][1], 'y2': shape[1][1]})
+                best_hand.update(**{'x1': shape[0][0], 'y1': shape[1][0]-((shape[1][0]-shape[1][1])/2), 'x2': shape[0][1], 'y2': shape[1][1]})
                 best_hand_ok = True
             elif p[-2][0] == 1:
-                best_panels.append({'x1': shape[0][0], 'x2': shape[1][0], 'y1': shape[0][1], 'y2': shape[1][1]})
+                best_panels.append({'x1': shape[0][0]-((shape[0][0]-shape[0][1])/4), 'y1': shape[1][0], 'x2': shape[0][1]+((shape[0][0]-shape[0][1])/4), 'y2': shape[1][1]})
 
     if best_hand_ok:
         for idx, panel in enumerate(best_panels):

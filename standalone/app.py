@@ -8,6 +8,7 @@ from sanic import Sanic
 from sanic.response import json as sanic_json
 from sanic_healthcheck import HealthCheck
 from sanic_cors import CORS
+from datetime import datetime
 
 from mlflow_handlers.mlflow_handlers import update_models
 from common.common import Timer
@@ -44,10 +45,75 @@ def worker_status():
 health.add_check(worker_status)
 
 
+@app.route('/load', methods=['POST'])
+async def load(request):
+
+    timer = Timer()
+
+    global_response = update_status = update_models()
+    update_model_detection()
+
+    elapsed = round(timer.value(), 3)
+
+    logging.info(json.dumps({'response': global_response, 'elapsed': elapsed}))
+    return sanic_json({"response": global_response, 'success': True, 'elapsed': elapsed}, 200)
+
+
+@app.route('/update', methods=['POST'])
+async def update(request):
+
+    timer = Timer()
+
+    global_response = update_status = update_models()
+    if update_status['Hands']:
+        update_model_detection()
+
+    elapsed = round(timer.value(), 3)
+
+    logging.info(json.dumps({'response': global_response, 'elapsed': elapsed}))
+    return sanic_json({"response": global_response, 'success': True, 'elapsed': elapsed}, 200)
+
+
+@app.route('/detection_minimal', methods=['POST'])
+async def detection_minimal(request):
+
+    timer = Timer()
+    init = datetime.now()
+
+    global_response = {}
+
+    update_status = update_models()
+    if update_status['Hands']:
+        update_model_detection()
+
+    response_detection = inference_request(pickle.dumps({'model': 'Hands', 'data': request.files["file"][0].body}))
+    img, predictions = inference_response(response_detection)
+
+    processing_response = None
+
+    if img and predictions:
+
+        response_rekogntion = rekognition_request(request.files["file"][0].body, predictions)
+        data = rekognition_response(response_rekogntion)
+
+        if data:
+
+            processing_response = process(data)
+
+    global_response['response_processing'] = processing_response
+
+    end = datetime.now()
+    elapsed = round(timer.value(), 3)
+
+    logging.info(json.dumps({'response': global_response, 'elapsed': elapsed}))
+    return sanic_json({"response": global_response, 'success': True, 'elapsed': elapsed, 'init': str(init), 'end': str(end)}, 200)
+
+
 @app.route('/detection', methods=['POST'])
 async def detection(request):
 
     timer = Timer()
+    init = datetime.now()
     global_response = {}
 
     update_status = update_models()
@@ -73,10 +139,11 @@ async def detection(request):
     global_response['response_rekognition'] = response_rekogntion
     global_response['response_processing'] = processing_response
 
+    end = datetime.now()
     elapsed = round(timer.value(), 3)
 
     logging.info(json.dumps({'response': global_response, 'elapsed': elapsed}))
-    return sanic_json({"response": global_response, 'success': True, 'elapsed': elapsed}, 200)
+    return sanic_json({"response": global_response, 'success': True, 'elapsed': elapsed, 'init': str(init), 'end': str(end)}, 200)
 
 
 if __name__ == "__main__":

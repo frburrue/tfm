@@ -11,6 +11,7 @@ mlflow.set_tracking_uri(os.getenv('MLFLOW_TRACKING_URI'))
 MLFLOW_CLIENT = mlflow.tracking.MlflowClient()
 
 REGISTERED_MODELS = ["Hands"]
+CURRENT_MODEL = "Unknown"
 MODELS = {}
 
 
@@ -26,6 +27,8 @@ def downlod_model(bucket_name, remoteDirectory_name):
 
 def update_models():
 
+    global CURRENT_MODEL
+
     update = {}
 
     for model_name in REGISTERED_MODELS:
@@ -39,16 +42,17 @@ def update_models():
                 folder = mv['source'].split('//')[1].split('/')[1]
                 if os.path.exists(os.path.join('./models', folder)):
                     print("Load existing model...")
-                    model = os.path.join(os.path.join('./models', folder), "artifacts/model/data/model.h5")
+                    update[model_name] = not (CURRENT_MODEL == model)
+                    CURRENT_MODEL = model = os.path.join(os.path.join('./models', folder), "artifacts/model/data/model.h5")
                 else:
                     print("Downloading model...")
                     downlod_model(bucket, folder)
-                    model = os.path.join(os.path.join('./models', folder), "artifacts/model/data/model.h5")
+                    update[model_name] = 1
+                    CURRENT_MODEL = model = os.path.join(os.path.join('./models', folder), "artifacts/model/data/model.h5")
                     if os.path.exists('./models'):
                         shutil.rmtree('./models')
                     os.mkdir('./models')
                     shutil.move(os.path.join(os.getcwd(), folder), './models')
-                    update[model_name] = 1
                 print("Using model {name} v{version} ({current_stage}) updated at {last_updated_timestamp}".format(**mv))
                 #response = {k: v for k, v in mv.items() if v}
                 break
