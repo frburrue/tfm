@@ -58,7 +58,7 @@ def get_iou(bb1, bb2):
     y_bottom = min(bb1['y2'], bb2['y2'])
 
     if x_right < x_left or y_bottom < y_top:
-        return 0.0
+        return (0.0, [(0,0), (0,0)])
 
     # The intersection of two axis-aligned bounding boxes is always an
     # axis-aligned bounding box
@@ -74,7 +74,7 @@ def get_iou(bb1, bb2):
     iou = intersection_area / float(bb1_area + bb2_area - intersection_area)
     assert iou >= 0.0
     assert iou <= 1.0
-    return iou
+    return (iou, [(x_left, y_top), (x_right, y_bottom)])
 
 
 def preprocess(img, predictions):
@@ -86,34 +86,41 @@ def preprocess(img, predictions):
     best_hand_confidence = -1
     best_panels = []
     best_hand_panel_overlap = -1.0
+    best_hand_panel_overlap_shape = [(-1, -1), (-1, -1)]
     best_hand_ok = False
     selected_panel = -1
 
     img = Image.open(fp.name)
     img_bckp = Image.open(fp.name)
 
+    img1 = ImageDraw.Draw(img)
+
     for p in predictions:
         print("Confidence: %d Class: %d" % (p[-2][-1], p[-2][0]))
         if p[-2][-1] >= 25:
             shape = list(map(lambda x: tuple(x), p[:2]))
-            img1 = ImageDraw.Draw(img)
-            img1.rectangle(shape, outline="red")
-
             if p[-2][0] == 0 and p[-2][-1] > best_hand_confidence:
                 best_hand_confidence = p[-2][-1]
-                best_hand.update(**{'x1': shape[0][0], 'y1': shape[1][0]-((shape[1][0]-shape[1][1])/2), 'x2': shape[0][1], 'y2': shape[1][1]})
+                best_hand.update(**{'x1': shape[0][0], 'x2': shape[1][0], 'y1': shape[0][1]-int(abs(shape[0][1]-shape[1][1])/2), 'y2': shape[1][1]})
                 best_hand_ok = True
             elif p[-2][0] == 1:
-                best_panels.append({'x1': shape[0][0]-((shape[0][0]-shape[0][1])/4), 'y1': shape[1][0], 'x2': shape[0][1]+((shape[0][0]-shape[0][1])/4), 'y2': shape[1][1]})
+                best_panels.append({'x1': shape[0][0]-int(abs(shape[0][0]-shape[1][0])/4), 'x2': shape[1][0]+int(abs(shape[0][0]-shape[1][0])/4), 'y1': shape[0][1], 'y2': shape[1][1]})
 
     if best_hand_ok:
+        shape = [(int(best_hand['x1']), int(best_hand['y1'])), (int(best_hand['x2']), int(best_hand['y2']))]
+        img1.rectangle(shape, outline="blue", width=15)
+        for best_panel in best_panels:
+            shape = [(int(best_panel['x1']), int(best_panel['y1'])), (int(best_panel['x2']), int(best_panel['y2']))]
+            img1.rectangle(shape, outline="red", width=15)
         for idx, panel in enumerate(best_panels):
-            iou = get_iou(best_hand, panel)
+            iou, shape = get_iou(best_hand, panel)
             if best_hand_panel_overlap < iou:
                 best_hand_panel_overlap = iou
+                best_hand_panel_overlap_shape = shape
                 selected_panel = idx
 
     if selected_panel >= 0:
+        img1.rectangle(best_hand_panel_overlap_shape, outline="black", width=15, fill="yellow")
         panel = best_panels[selected_panel]
         new_img = img_bckp.crop((panel['x1'], panel['y1'], panel['x2'], panel['y2']))
     else:
@@ -121,14 +128,14 @@ def preprocess(img, predictions):
 
     fp.close()
 
-    return new_img
+    return new_img, img
 
 
 def rekognition_request(img, predictions):
 
     timer = Timer()
 
-    new_frame = preprocess(img, predictions)
+    new_frame, processed = preprocess(img, predictions)
     img_str = None
     text = None
 
@@ -148,11 +155,18 @@ def rekognition_request(img, predictions):
         img_str = base64.b64encode(buffered.getvalue()).decode('utf-8')
         buffered.close()
 
+        buffered = BytesIO()
+        processed.save(buffered, format="PNG")
+
+        img_processed_str = base64.b64encode(buffered.getvalue()).decode('utf-8')
+        buffered.close()
+
     elapsed = round(timer.value(), 3)
 
     response = {
         'payload': {
             'image': img_str,
+            'image_processed': img_processed_str,
             'text': text
         },
         'elapsed': elapsed

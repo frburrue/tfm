@@ -42,13 +42,15 @@ def update_models():
                 folder = mv['source'].split('//')[1].split('/')[1]
                 if os.path.exists(os.path.join('./models', folder)):
                     print("Load existing model...")
+                    model = os.path.join(os.path.join('./models', folder), "artifacts/model/data/model.h5")
                     update[model_name] = not (CURRENT_MODEL == model)
-                    CURRENT_MODEL = model = os.path.join(os.path.join('./models', folder), "artifacts/model/data/model.h5")
+                    CURRENT_MODEL = model
                 else:
                     print("Downloading model...")
                     downlod_model(bucket, folder)
-                    update[model_name] = 1
-                    CURRENT_MODEL = model = os.path.join(os.path.join('./models', folder), "artifacts/model/data/model.h5")
+                    model = os.path.join(os.path.join('./models', folder), "artifacts/model/data/model.h5")
+                    update[model_name] = not (CURRENT_MODEL == model)
+                    CURRENT_MODEL = model
                     if os.path.exists('./models'):
                         shutil.rmtree('./models')
                     os.mkdir('./models')
