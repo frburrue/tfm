@@ -77,7 +77,7 @@ def get_iou(bb1, bb2):
     return (iou, [(x_left, y_top), (x_right, y_bottom)])
 
 
-def preprocess(img, predictions):
+def preprocess(img, predictions, **kwargs):
 
     fp = tempfile.NamedTemporaryFile()
     fp.write(img)
@@ -89,11 +89,13 @@ def preprocess(img, predictions):
     best_hand_panel_overlap_shape = [(-1, -1), (-1, -1)]
     best_hand_ok = False
     selected_panel = -1
+    draw = bool(int(kwargs['flags'][2]))
 
     img = Image.open(fp.name)
     img_bckp = Image.open(fp.name)
 
-    img1 = ImageDraw.Draw(img)
+    if draw:
+        img1 = ImageDraw.Draw(img)
 
     for p in predictions:
         print("Confidence: %d Class: %d" % (p[-2][-1], p[-2][0]))
@@ -108,10 +110,12 @@ def preprocess(img, predictions):
 
     if best_hand_ok:
         shape = [(int(best_hand['x1']), int(best_hand['y1'])), (int(best_hand['x2']), int(best_hand['y2']))]
-        img1.rectangle(shape, outline="blue", width=15)
+        if draw:
+            img1.rectangle(shape, outline="blue", width=15)
         for best_panel in best_panels:
             shape = [(int(best_panel['x1']), int(best_panel['y1'])), (int(best_panel['x2']), int(best_panel['y2']))]
-            img1.rectangle(shape, outline="red", width=15)
+            if draw:
+                img1.rectangle(shape, outline="green", width=15)
         for idx, panel in enumerate(best_panels):
             iou, shape = get_iou(best_hand, panel)
             if best_hand_panel_overlap < iou:
@@ -120,7 +124,8 @@ def preprocess(img, predictions):
                 selected_panel = idx
 
     if selected_panel >= 0:
-        img1.rectangle(best_hand_panel_overlap_shape, outline="black", width=15, fill="yellow")
+        if draw:
+            img1.rectangle(best_hand_panel_overlap_shape, outline="red", width=15)
         panel = best_panels[selected_panel]
         new_img = img_bckp.crop((panel['x1'], panel['y1'], panel['x2'], panel['y2']))
     else:
@@ -131,11 +136,11 @@ def preprocess(img, predictions):
     return new_img, img
 
 
-def rekognition_request(img, predictions):
+def rekognition_request(img, predictions, **kwargs):
 
     timer = Timer()
 
-    new_frame, processed = preprocess(img, predictions)
+    new_frame, processed = preprocess(img, predictions, **kwargs)
     img_str = None
     text = None
 

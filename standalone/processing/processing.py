@@ -1,12 +1,16 @@
 import copy
 import numpy as np
+from collections import defaultdict
 
 from mongo.mongo import MongoWrapper
 from common.common import Timer
 
+
 MONGO_CLIENT = MongoWrapper()
 USERS_COLLECTION = 'users'
 DATA_COLLECTION = 'nodered'
+MQTT_COLLECTION = 'mqtt'
+TWTITTER_COLLECTION = 'twitter'
 
 
 def printDistances(distances, token1Length, token2Length):
@@ -69,56 +73,73 @@ def calcDictDistance(lines, word, numWords):
 
 def search_match(data):
 
-    usernames = [user['user'] for user in [copy.deepcopy(user) for user in MONGO_CLIENT.get_many(USERS_COLLECTION, {})]]
+    usernames = {user['user']: user['id'] for user in [copy.deepcopy(user) for user in MONGO_CLIENT.get_many(USERS_COLLECTION, {})]}
 
     neighborhood = []
     for text in data['TextDetections']:
-        neighborhood.append(calcDictDistance(usernames, text['DetectedText'], 1)[0] + [text['DetectedText']])
+        neighborhood.append(calcDictDistance(list(usernames.keys()), text['DetectedText'], 1)[0] + [text['DetectedText']])
     neighborhood.sort(key=lambda x: x[0])
 
     id_user = None
 
     for neighboor in neighborhood:
         if float(neighboor[0]) < (len(neighboor[1])*2)/5:
-            id_user = MONGO_CLIENT.get_one(USERS_COLLECTION, {"user": neighboor[1]})
-            if id_user:
+            id_user = {'id': usernames.get(neighboor[1], None), 'user': neighboor[1]}
+            if id_user['id']:
                 break
-
+            else:
+                id_user = None
     return id_user, neighborhood
 
 
 def get_user_data(id_user):
 
-    user_data = []
+    user_data = defaultdict(list)
+    user_data['application'] = 0
 
     if id_user:
         messages = MONGO_CLIENT.get_many(DATA_COLLECTION, {"chatId": id_user['id']})
         for message in messages:
-            if message['show']:
-                user_data.append(message['content'])
+            if message.get('show'):
+                user_data['publications'].append({k: message.get(k, None) for k in ('content', 'date')})
+                user_data['application'] += 1
+
+        messages = MONGO_CLIENT.get_many(TWTITTER_COLLECTION, {'tweetId': id_user['user'].replace(' ', '_')})
+        for message in messages:
+            if message.get('show', True):
+                user_data['opinions'].append({k: message.get(k, None) for k in ('content', 'date')})
+                user_data['application'] += 1
+
+        messages = MONGO_CLIENT.get_many(MQTT_COLLECTION, {'mqttId': id_user['id']})
+        for message in messages:
+            if message.get('show', True):
+                user_data['sensors'].append({k: message.get(k, None) for k in ('content', 'date')})
+                user_data['application'] += 1
 
     return user_data
 
 
-def process(data):
+def process(data, **kwargs):
 
     timer = Timer()
-
-    messages = []
 
     user, neighborhood = search_match(data)
     user_data = get_user_data(user)
 
-    for data in user_data:
-        messages.append(data)
-
     if isinstance(user, dict) and 'user' in user:
         user = user['user']
-        if not len(messages):
-            messages.append("No hay mensajes disponibles...")
+        if not user_data['application']:
+            user_data['application'] = ["No hay mensajes disponibles..."]
+        else:
+            user_data['application'] = []
     else:
         user = None
-        messages.append("No se ha encontrado usuario...")
+        user_data = {
+            'application': ["No hay mensajes disponibles..."],
+            'publications': [],
+            'opinions': [],
+            'sensors': []
+        }
 
     elapsed = round(timer.value(), 3)
 
@@ -126,7 +147,7 @@ def process(data):
         'payload': {
             'user': user,
             'matches': neighborhood,
-            'messages': messages
+            'messages': user_data
         },
         'elapsed': elapsed
     }

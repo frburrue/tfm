@@ -42,7 +42,7 @@ def update_model_detection():
         DETECTION_MODEL = load_model(model_path)
 
 
-def inference(yolo, image_path):
+def inference(yolo, image_path, **kwargs):
 
     # anchors_path = "./model_data/yolo_anchors.txt"
     # classes_path = "./model_data/data_classes.txt"
@@ -55,6 +55,7 @@ def inference(yolo, image_path):
     # anchors = get_anchors(anchors_path)
 
     temp_dir = tempfile.TemporaryDirectory()
+    save_fig = bool(int(kwargs['flags'][1]))
 
     results = []
 
@@ -63,12 +64,15 @@ def inference(yolo, image_path):
         prediction, image = detect_object(
             yolo,
             img_path,
-            save_img=True,
+            save_img=save_fig,
             save_img_path=temp_dir.name,
             postfix="",
         )
 
-        img = open(os.path.join(temp_dir.name, os.path.basename(img_path)), 'rb').read()
+        if save_fig:
+            img = open(os.path.join(temp_dir.name, os.path.basename(img_path)), 'rb').read()
+        else:
+            img = b""
 
         result = {'image': base64.encodebytes(img).decode("utf-8"), 'predictions': []}
 
@@ -91,12 +95,11 @@ def inference(yolo, image_path):
     return results
 
 
-def inference_request(body):
+def inference_request(data, **kwargs):
 
     try:
         timer = Timer()
 
-        data = pickle.loads(body)
         model = DETECTION_MODEL
         response = {}
 
@@ -104,7 +107,7 @@ def inference_request(body):
         fp.write(data['data'])
 
         if model:
-            response['result'] = inference(model, fp.name)
+            response['result'] = inference(model, fp.name, **kwargs)
         else:
             response = {'error': 'service unavailable'}
 

@@ -116,27 +116,27 @@ async def detection(request):
     init = datetime.now()
     global_response = {}
 
-    update_status = update_models()
-    if update_status['Hands']:
-        update_model_detection()
-
-    response_detection = inference_request(pickle.dumps({'model': 'Hands', 'data': request.files["file"][0].body}))
+    response_detection = inference_request({'model': 'Hands', 'data': request.files["file"][0].body}, **request.form)
     img, predictions = inference_response(response_detection)
 
-    response_rekogntion = None
-    processing_response = None
+    response_rekogntion = {}
+    processing_response = {}
 
-    if img and predictions:
+    if img or predictions:
 
-        response_rekogntion = rekognition_request(request.files["file"][0].body, predictions)
+        response_rekogntion = rekognition_request(request.files["file"][0].body, predictions, **request.form)
         data = rekognition_response(response_rekogntion)
 
         if data:
 
             processing_response = process(data)
 
-    global_response['response_detection'] = response_detection
-    global_response['response_rekognition'] = response_rekogntion
+    if not bool(int(request.form['flags'][4])):
+        global_response['response_detection'] = {k: response_detection.get(k, None) for k in ('elapsed',)}
+        global_response['response_rekognition'] = {k: response_rekogntion.get(k, None) for k in ('elapsed',)}
+    else:
+        global_response['response_detection'] = response_detection
+        global_response['response_rekognition'] = response_rekogntion
     global_response['response_processing'] = processing_response
 
     end = datetime.now()
