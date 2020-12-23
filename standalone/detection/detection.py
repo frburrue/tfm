@@ -7,7 +7,7 @@ import numpy as np
 from yolo3.yolo import YOLO
 
 from .utils import detect_object
-from common.common import Timer
+from common.common import Timer, OutputFilter
 from mlflow_handlers.mlflow_handlers import get_model
 
 
@@ -55,7 +55,7 @@ def inference(yolo, image_path, **kwargs):
     # anchors = get_anchors(anchors_path)
 
     temp_dir = tempfile.TemporaryDirectory()
-    save_fig = bool(int(kwargs['flags'][1]))
+    save_fig = bool(int(kwargs['flags'][OutputFilter.DETECTION.value]))
 
     results = []
 

@@ -8,7 +8,7 @@ from PIL import Image, ImageDraw
 from io import BytesIO
 from botocore.config import Config
 
-from common.common import Timer
+from common.common import Timer, OutputFilter
 from .utils import RekognitionTextParser, show_rekognition_polygons
 
 
@@ -89,7 +89,7 @@ def preprocess(img, predictions, **kwargs):
     best_hand_panel_overlap_shape = [(-1, -1), (-1, -1)]
     best_hand_ok = False
     selected_panel = -1
-    draw = bool(int(kwargs['flags'][2]))
+    draw = bool(int(kwargs['flags'][OutputFilter.REKOGNITION.value]))
 
     img = Image.open(fp.name)
     img_bckp = Image.open(fp.name)

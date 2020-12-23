@@ -1,6 +1,6 @@
 import json
 import os
-import pickle
+import uuid
 import sys
 import signal
 import logging
@@ -11,7 +11,7 @@ from sanic_cors import CORS
 from datetime import datetime
 
 from mlflow_handlers.mlflow_handlers import update_models
-from common.common import Timer
+from common.common import Timer, OutputFilter
 from detection.detection import update_model_detection, inference_request, inference_response
 from rekognition.rekognition import rekognition_request, rekognition_response
 from processing.processing import process
@@ -74,41 +74,6 @@ async def update(request):
     return sanic_json({"response": global_response, 'success': True, 'elapsed': elapsed}, 200)
 
 
-@app.route('/detection_minimal', methods=['POST'])
-async def detection_minimal(request):
-
-    timer = Timer()
-    init = datetime.now()
-
-    global_response = {}
-
-    update_status = update_models()
-    if update_status['Hands']:
-        update_model_detection()
-
-    response_detection = inference_request(pickle.dumps({'model': 'Hands', 'data': request.files["file"][0].body}))
-    img, predictions = inference_response(response_detection)
-
-    processing_response = None
-
-    if img and predictions:
-
-        response_rekogntion = rekognition_request(request.files["file"][0].body, predictions)
-        data = rekognition_response(response_rekogntion)
-
-        if data:
-
-            processing_response = process(data)
-
-    global_response['response_processing'] = processing_response
-
-    end = datetime.now()
-    elapsed = round(timer.value(), 3)
-
-    logging.info(json.dumps({'response': global_response, 'elapsed': elapsed}))
-    return sanic_json({"response": global_response, 'success': True, 'elapsed': elapsed, 'init': str(init), 'end': str(end)}, 200)
-
-
 @app.route('/detection', methods=['POST'])
 async def detection(request):
 
@@ -116,7 +81,17 @@ async def detection(request):
     init = datetime.now()
     global_response = {}
 
-    response_detection = inference_request({'model': 'Hands', 'data': request.files["file"][0].body}, **request.form)
+    if 'params' in request.form:
+        control = json.loads(request.form['params'][0].replace('\\', ''))
+    else:
+        control = request.form
+
+    if bool(int(control['flags'][OutputFilter.APP_IN.value])):
+        global_response['id'] = control['id']
+    else:
+        global_response['id'] = str(uuid.uuid4())
+
+    response_detection = inference_request({'model': 'Hands', 'data': request.files["file"][0].body}, **control)
     img, predictions = inference_response(response_detection)
 
     response_rekogntion = {}
@@ -124,14 +99,14 @@ async def detection(request):
 
     if img or predictions:
 
-        response_rekogntion = rekognition_request(request.files["file"][0].body, predictions, **request.form)
+        response_rekogntion = rekognition_request(request.files["file"][0].body, predictions, **control)
         data = rekognition_response(response_rekogntion)
 
         if data:
 
             processing_response = process(data)
 
-    if not bool(int(request.form['flags'][4])):
+    if not bool(int(control['flags'][OutputFilter.APP_OUT.value])):
         global_response['response_detection'] = {k: response_detection.get(k, None) for k in ('elapsed',)}
         global_response['response_rekognition'] = {k: response_rekogntion.get(k, None) for k in ('elapsed',)}
     else:
