@@ -18,8 +18,8 @@ services:
       - '${POSTGRES_RESOURCES_PATH}:/var/lib/postgresql/data'
     environment:
       POSTGRES_DB: default
-      POSTGRES_USER: francisco
-      POSTGRES_PASSWORD: francisco
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     restart: always
 
   mongo:
@@ -31,8 +31,8 @@ services:
     networks: ['${NETWORK}']
     volumes: ['${MONGO_RESOURCES_PATH}:/data/db']
     environment:
-      MONGO_INITDB_ROOT_USERNAME: francisco
-      MONGO_INITDB_ROOT_PASSWORD: francisco
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_INITDB_ROOT_USERNAME}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_INITDB_ROOT_PASSWORD}
     restart: always
 
   node-red:
@@ -67,8 +67,8 @@ services:
       - '0.0.0.0:${MLFLOW_PORT_NOTEBOOK}:8888'
     networks: ['${NETWORK}']
     environment:
-      MLFLOW_TRACKING_URI: 'postgresql://francisco:francisco@mlflow.c3uusfqnmup4.eu-west-3.rds.amazonaws.com/mlflow'
-      MLFLOW_ARTIFACTS_PATH: 's3://mlflow-tfm'
+      MLFLOW_TRACKING_URI: ${MLFLOW_TRACKING_URI}
+      MLFLOW_ARTIFACTS_PATH: ${MLFLOW_ARTIFACTS_PATH}
     restart: always
 
   standalone:
@@ -79,9 +79,9 @@ services:
       - '0.0.0.0:${STANDALONE_PORT}:${STANDALONE_PORT}'
     networks: [ '${NETWORK}' ]
     environment:
-      MLFLOW_TRACKING_URI: 'postgresql://francisco:francisco@mlflow.c3uusfqnmup4.eu-west-3.rds.amazonaws.com/mlflow'
-      MONGO_EC2: 'ec2-15-188-9-114.eu-west-3.compute.amazonaws.com:${MONGO_PORT}'
-      MONGO_BBDD: 'admin'
+      MLFLOW_TRACKING_URI: ${MLFLOW_TRACKING_URI}
+      MONGO: ${MLFLOW_ROOT}:${MONGO_PORT}
+      MONGO_BBDD: admin
     restart: always
 
 networks:

@@ -1,4 +1,4 @@
 FROM nodered/node-red
 
-COPY settings.js flows.json flows_cred.json /data
+COPY settings.js flows.json flows_cred.json /data/
 

@@ -7,8 +7,8 @@ class MongoWrapper:
     def __init__(self):
 
         self.client = MongoClient(
-            'mongodb://' + os.getenv('MONGO_USERNAME', 'francisco') + ':' + os.getenv('MONGO_PASSWORD', 'francisco') + \
-                '@' + os.getenv('MONGO_EC2', 'thewhitehonet.ddns.net:60222')
+            'mongodb://' + os.getenv('MONGO_USERNAME') + ':' + os.getenv('MONGO_PASSWORD') + \
+                '@' + os.getenv('MONGO', 'localhost:60222')
         )
         self.db = self.client[os.getenv('MONGO_BBDD', 'admin')]
 

@@ -48,7 +48,7 @@ fi
 done
 
 echo "Ready!"
-
+. setenv.sh
 ARCH=$(uname -m) \
 NETWORK=franburruezo \
 STANDALONE_HOST=standalone \
