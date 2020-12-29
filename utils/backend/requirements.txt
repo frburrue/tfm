@@ -1,5 +1,0 @@
-gunicorn
-pika
-sanic
-sanic-healthcheck
-sanic-cors
