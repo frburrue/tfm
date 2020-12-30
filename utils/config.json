@@ -1,0 +1,16 @@
+{
+    "model" : {
+        "min_input_size":       416,
+        "max_input_size":       416,
+        "anchors":              [10,13,  16,30,  33,23,  30,61,  62,45,  59,119,  116,90,  156,198,  373,326],
+        "labels":               ["Dedo", "Panel"],
+        "dataset_folder":        "/home/ubuntu/tfm/TrainYourOwnYOLO/Data/Source_Images/Training_Images/vott-csv-export-augmented-all/data_test.pckl"
+    },
+
+    "train": {
+        "batch_size": 4,
+        "model_folder": "/home/ubuntu/tfm/standalone/models/82f298920f8646ef89bd4313ef8202d9/artifacts/model/data/model.h5",
+        "classes_path": "/home/ubuntu/tfm/standalone/model_data/data_classes.txt",
+        "anchors_path": "/home/ubuntu/tfm/standalone/model_data/yolo_anchors.txt"
+    }
+}
