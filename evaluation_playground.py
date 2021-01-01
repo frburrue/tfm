@@ -291,17 +291,14 @@ def compute_ap(recall, precision):
 
 # %%
 
-def evaluation_v2(all_detections, all_annotations, generator, confidence_threshold=0.5, iou_threshold=0.5):
+def evaluation(all_detections, all_annotations, generator, iou_threshold=0.5):
     average_precisions = []
 
     for label in range(generator.num_classes()):
         false_positives = np.zeros((0,))
         true_positives = np.zeros((0,))
-        false_negatives = np.zeros((0,))
-        true_negatives = np.zeros((0,))
         scores = np.zeros((0,))
         num_annotations = 0.0
-        annotations_pending = 0.0
 
         for i in range(generator.size()):
             detections = all_detections[i][label]
@@ -312,19 +309,9 @@ def evaluation_v2(all_detections, all_annotations, generator, confidence_thresho
             for d in detections:
                 scores = np.append(scores, d[4])
 
-                if annotations.shape[0] == 0:  # Si no hay anotación
-                    # index = int(not bool(label))
-                    # all_annotations[i][index].shape[0] == 0
-                    if d[4] < confidence_threshold:  # El score no supera un umbral, verdadero negativo
-                        false_positives = np.append(false_positives, 0)
-                        true_positives = np.append(true_positives, 0)
-                        false_negatives = np.append(false_negatives, 0)
-                        true_negatives = np.append(true_negatives, 1)
-                    else:  # El score es alto, falso positivo
-                        false_positives = np.append(false_positives, 1)
-                        true_positives = np.append(true_positives, 0)
-                        false_negatives = np.append(false_negatives, 0)
-                        true_negatives = np.append(true_negatives, 0)
+                if annotations.shape[0] == 0:  # Si no hay anotación de esa detección es un falso positivo
+                    false_positives = np.append(false_positives, 1)
+                    true_positives = np.append(true_positives, 0)
                     continue
 
                 overlaps = compute_overlap(np.expand_dims(d, axis=0),
@@ -332,29 +319,16 @@ def evaluation_v2(all_detections, all_annotations, generator, confidence_thresho
                 assigned_annotation = np.argmax(overlaps, axis=1)  # Se queda con la anotación que maximiza el IOU
                 max_overlap = overlaps[0, assigned_annotation]  # Se queda con el valor del IOU se esta anotación
 
-                if assigned_annotation in detected_annotations:
-                    false_positives = np.append(false_positives, 1)
-                    true_positives = np.append(true_positives, 0)
-                    false_negatives = np.append(false_negatives, 0)
-                    true_negatives = np.append(true_negatives, 0)
-                    continue
-
-                if max_overlap >= iou_threshold and d[
-                    4] >= confidence_threshold:  # Comprueba que el IOU supera un cierto umbral de igual modo que la precisión en la clasificación debe superar otro
+                if max_overlap >= iou_threshold and assigned_annotation not in detected_annotations:  # Comprueba si esa anotación no ha sido ya asignada a una detección (además de comprobar que el IOU supera un cierto umbral). Las detecciones están ordenadas por score descendente por lo que se quedaría primero la que tiene mayor score (aunque luego pueda tener menor IoU).
                     false_positives = np.append(false_positives, 0)
                     true_positives = np.append(true_positives, 1)
-                    false_negatives = np.append(false_negatives, 0)
-                    true_negatives = np.append(true_negatives, 0)
-                    detected_annotations.append(assigned_annotation)
-                else:  # IOU por debajo del umbral o precisión en la clasificación por debajo de su umbral
+                    detected_annotations.append(
+                        assigned_annotation)  # Guarda la anotación para que no pueda volver a ser usada
+                else:  # IOU por debajo del umbral o anotación ya utilizada
                     false_positives = np.append(false_positives, 1)
                     true_positives = np.append(true_positives, 0)
-                    false_negatives = np.append(false_negatives, 0)
-                    true_negatives = np.append(true_negatives, 0)
 
-            annotations_pending = (annotations_pending + annotations.shape[0]) - len(detected_annotations)
-
-            # no annotations -> AP for this class is 0 (is this correct?)
+                    # no annotations -> AP for this class is 0 (is this correct?)
         if num_annotations == 0:
             average_precisions[label] = 0
             continue
@@ -363,12 +337,10 @@ def evaluation_v2(all_detections, all_annotations, generator, confidence_thresho
         indices = np.argsort(-scores)
         false_positives = false_positives[indices]
         true_positives = true_positives[indices]
-        true_negatives = true_negatives[indices]
 
         # compute false positives and true positives (Esto es lo mismo que sumar unos y ceros de cada una de los vectores pero se hace así para computar el AP)
         false_positives = np.cumsum(false_positives)
         true_positives = np.cumsum(true_positives)
-        true_negatives = np.cumsum(true_negatives)
 
         # compute recall and precision (Y el F1)
         recall = true_positives / num_annotations  # Es lo mismo que dividir entre TP + FN porque la suma de ambas tiene que ser el número de anotaciones (se detecten o no)
@@ -379,8 +351,7 @@ def evaluation_v2(all_detections, all_annotations, generator, confidence_thresho
         average_precision = compute_ap(recall, precision)
         average_precisions.append({'label': generator.labels[label], 'AP': average_precision, 'recall': recall[-1],
                                    'precision': precision[-1], 'f1': f1[-1], 'support': num_annotations,
-                                   'TP': true_positives[-1], 'FP': false_positives[-1], 'TN': true_negatives[-1],
-                                   'FN': annotations_pending})
+                                   'TP': true_positives[-1], 'FP': false_positives[-1]})
 
     return average_precisions
 
@@ -424,7 +395,7 @@ all_detections, all_annotations = detection(infer_model, valid_generator)
 
 # %%
 
-average_precisions = evaluation_v2(all_detections, all_annotations, valid_generator)
+average_precisions = evaluation(all_detections, all_annotations, valid_generator)
 
 # %% md
 

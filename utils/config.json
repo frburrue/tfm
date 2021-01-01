@@ -2,7 +2,7 @@
     "model" : {
         "anchors":              [10,13,  16,30,  33,23,  30,61,  62,45,  59,119,  116,90,  156,198,  373,326],
         "labels":               ["Dedo", "Panel"],
-        "dataset_folder":        "/home/ubuntu/tfm/TrainYourOwnYOLO/Data/Source_Images/Training_Images/vott-csv-export-augmented-check/data_test.pckl"
+        "dataset_folder":        "/home/ubuntu/tfm/TrainYourOwnYOLO/Data/Source_Images/Training_Images/vott-csv-export-augmented-all/data_test.pckl"
     },
 
     "train": {
