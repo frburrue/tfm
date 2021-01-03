@@ -3,7 +3,7 @@ version: '3.7'
 x-common-variables:
   - &common_environment_variables
     POSTGRES: ${POSTGRES_HOST}:5432
-    MONGO: ${MONGO_HOST}:27017
+    MONGO_EC2: ${MONGO_HOST}:27017
 
 services:
 
@@ -79,9 +79,11 @@ services:
       - '0.0.0.0:${STANDALONE_PORT}:${STANDALONE_PORT}'
     networks: [ '${NETWORK}' ]
     environment:
+      <<: *common_environment_variables
       MLFLOW_TRACKING_URI: ${MLFLOW_TRACKING_URI}
-      MONGO: ${MLFLOW_ROOT}:${MONGO_PORT}
       MONGO_BBDD: admin
+      MONGO_USERNAME: ${MONGO_INITDB_ROOT_PASSWORD}
+      MONGO_PASSWORD: ${MONGO_INITDB_ROOT_PASSWORD}
     restart: always
 
 networks:
