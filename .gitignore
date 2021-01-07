@@ -3,6 +3,11 @@
 .ipynb_checkpoints/
 
 setenv.sh
+
 utils/Deprecated/
 standalone/models/
+
 keras-yolo3/
+TrainYourOwnYOLO/
+
+Images.ipynb
