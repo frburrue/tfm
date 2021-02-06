@@ -3,6 +3,3 @@
 .ipynb_checkpoints/
 
 setenv.sh
-
-utils/Deprecated/
-standalone/models/
